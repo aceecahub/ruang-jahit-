@@ -1,21 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import { dashboard } from '@/routes';
 import { useAppearance } from '@/composables/useAppearance';
+import { useDashboardTab } from '@/composables/useDashboardTab';
 import { toast } from 'vue-sonner';
 import {
-    LayoutGrid,
-    TrendingUp,
-    Scissors,
-    Banknote,
-    Boxes,
-    Users,
-    UserCheck,
-    Truck,
     Calendar,
     Plus,
-    RotateCcw,
     X,
 } from '@lucide/vue';
 
@@ -52,29 +44,14 @@ const props = defineProps<{
 const { resolvedAppearance } = useAppearance();
 const isDark = computed(() => resolvedAppearance.value === 'dark');
 
-// Navigation Tabs
-export type TabKey =
-    | 'overview'
-    | 'sales'
-    | 'production'
-    | 'finance'
-    | 'inventory'
-    | 'customers'
-    | 'employees'
-    | 'quality';
+// Navigation Tabs Composable
+const { activeTab, tabs, switchTab, initTabFromUrl } = useDashboardTab();
 
-const tabs = [
-    { key: 'overview', label: 'Ringkasan Bisnis', icon: LayoutGrid },
-    { key: 'sales', label: 'Penjualan', icon: TrendingUp },
-    { key: 'production', label: 'Produksi', icon: Scissors },
-    { key: 'finance', label: 'Keuangan', icon: Banknote },
-    { key: 'inventory', label: 'Inventaris & Bahan', icon: Boxes },
-    { key: 'customers', label: 'Pelanggan', icon: Users },
-    { key: 'employees', label: 'Produktivitas Karyawan', icon: UserCheck },
-    { key: 'quality', label: 'Kualitas & Pengiriman', icon: Truck },
-];
-
-const activeTab = ref<TabKey>('overview');
+// Dynamic title based on active tab
+const currentTabTitle = computed(() => {
+    const found = tabs.find((t) => t.key === activeTab.value);
+    return found ? found.title : 'Dashboard Owner';
+});
 
 // Filter state
 const filters = ref<FilterState>({
@@ -87,33 +64,16 @@ const filters = ref<FilterState>({
 // Modal state for "+ Order Baru"
 const isNewOrderModalOpen = ref(false);
 
-// Initialize active tab from URL query param if present
 onMounted(() => {
-    if (typeof window !== 'undefined') {
-        const params = new URLSearchParams(window.location.search);
-        const tabParam = params.get('tab') as TabKey;
-        if (tabParam && tabs.some((t) => t.key === tabParam)) {
-            activeTab.value = tabParam;
-        } else if (props.initialTab && tabs.some((t) => t.key === props.initialTab)) {
-            activeTab.value = props.initialTab as TabKey;
-        }
+    initTabFromUrl();
+    if (props.initialTab) {
+        switchTab(props.initialTab);
     }
 });
 
-function switchTab(tabKey: string) {
-    if (tabs.some((t) => t.key === tabKey)) {
-        activeTab.value = tabKey as TabKey;
-        if (typeof window !== 'undefined') {
-            const url = new URL(window.location.href);
-            url.searchParams.set('tab', tabKey);
-            window.history.replaceState(null, '', url.toString());
-        }
-    }
-}
-
 function handleExport() {
     toast.success('Laporan berhasil diekspor!', {
-        description: `Data analitik ${tabs.find((t) => t.key === activeTab.value)?.label} telah diunduh (format CSV/Excel).`,
+        description: `Data analitik ${currentTabTitle.value} telah diunduh (format CSV/Excel).`,
     });
 }
 
@@ -126,7 +86,7 @@ function handleSaveNewOrder() {
 </script>
 
 <template>
-    <Head :title="`Dashboard Owner - ${tabs.find(t => t.key === activeTab)?.label}`" />
+    <Head :title="`Dashboard - ${currentTabTitle}`" />
 
     <div class="min-h-full bg-[#f4f6fa] dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
 
@@ -134,10 +94,7 @@ function handleSaveNewOrder() {
         <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
                 <div class="flex items-center gap-2.5">
-                    <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Dashboard Owner</h1>
-                    <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/60 px-2.5 py-0.5 text-[11px] font-semibold">
-                        Konveksi & Ruang Jahit
-                    </span>
+                    <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{{ currentTabTitle }}</h1>
                 </div>
                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Sistem kendali operasional, finansial & produksi real-time</p>
             </div>
@@ -159,25 +116,6 @@ function handleSaveNewOrder() {
                 </button>
             </div>
         </header>
-
-        <!-- Horizontal Tab Pill Navigation (8 Sub-modules) -->
-        <nav class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-1.5 rounded-2xl shadow-xs">
-            <button
-                v-for="t in tabs"
-                :key="t.key"
-                type="button"
-                @click="switchTab(t.key)"
-                class="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl whitespace-nowrap transition cursor-pointer"
-                :class="[
-                    activeTab === t.key
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                ]"
-            >
-                <component :is="t.icon" class="h-3.5 w-3.5" />
-                <span>{{ t.label }}</span>
-            </button>
-        </nav>
 
         <!-- Interactive Filter Bar -->
         <FilterBar

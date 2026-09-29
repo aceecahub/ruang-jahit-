@@ -15,6 +15,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { DASHBOARD_TABS } from '@/composables/useDashboardTab';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -22,6 +23,12 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+        items: DASHBOARD_TABS.map((tab) => ({
+            title: tab.title,
+            href: tab.href,
+            key: tab.key,
+            icon: tab.icon,
+        })),
     },
 ];
 </script>
