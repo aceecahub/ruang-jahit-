@@ -11,4 +11,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     ->name('dashboard');
 });
 
+Route::get('/order-rekap', [OrderRekapController::class, 'index'])
+    ->middleware('auth')
+    ->name('order-rekap.index');
+
 require __DIR__.'/settings.php';
