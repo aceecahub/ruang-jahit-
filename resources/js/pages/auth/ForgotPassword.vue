@@ -4,7 +4,6 @@ import { Form, Head, Link } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
 import { Spinner } from '@/components/ui/spinner';
 import { login } from '@/routes';
-import { email } from '@/routes/password';
 import { Mail, CheckCircle2, Play, ArrowLeft } from '@lucide/vue';
 
 defineProps<{
@@ -26,14 +25,14 @@ const emailInput = ref('');
                     <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white">
                         <Play class="h-4 w-4 fill-current ml-0.5" />
                     </div>
-                    <span class="text-xl font-bold tracking-tight">SmartSave</span>
+                    <span class="text-xl font-bold tracking-tight">Ruang Jahit</span>
                 </div>
     
                 <!-- Form Container -->
                 <div class="mx-auto my-6 flex w-full max-w-sm flex-col justify-center">
-                    <h1 class="mb-2 text-center text-3xl font-bold tracking-tight">Forgot Password</h1>
+                    <h1 class="mb-2 text-center text-3xl font-bold tracking-tight">Lupa Kata Sandi</h1>
                     <p class="mb-6 text-center text-sm text-slate-500">
-                        Enter your email address and we will send you a link to reset your password
+                        Masukkan alamat email Anda untuk menerima tautan atur ulang password akun Ruang Jahit.
                     </p>
     
                     <div
@@ -44,7 +43,8 @@ const emailInput = ref('');
                     </div>
     
                     <Form
-                        v-bind="email.form()"
+                        action="/forgot-password"
+                        method="post"
                         v-slot="{ errors, processing }"
                         class="flex flex-col gap-4"
                     >
@@ -53,7 +53,7 @@ const emailInput = ref('');
                             <div class="relative flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-2.5 transition focus-within:border-blue-600 focus-within:ring-1 focus-within:ring-blue-600 shadow-sm">
                                 <Mail class="h-5 w-5 text-slate-400" />
                                 <div class="flex flex-1 flex-col">
-                                    <label for="email" class="text-[10px] font-medium text-slate-500">Email Address</label>
+                                    <label for="email" class="text-[10px] font-medium text-slate-500">Alamat Email</label>
                                     <input
                                         id="email"
                                         type="email"
@@ -62,7 +62,7 @@ const emailInput = ref('');
                                         v-focus
                                         autocomplete="email"
                                         class="w-full border-none bg-transparent p-0 text-sm font-semibold text-slate-900 outline-none focus:ring-0"
-                                        placeholder="ialirezamp@gmail.com"
+                                        placeholder="owner@ruangjahit.com"
                                         v-model="emailInput"
                                     />
                                 </div>
@@ -78,7 +78,7 @@ const emailInput = ref('');
                             class="mt-2 flex w-full items-center justify-center rounded-2xl bg-[#0066FF] py-3.5 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition hover:bg-blue-700 active:scale-[0.99] disabled:opacity-70 cursor-pointer"
                         >
                             <Spinner v-if="processing" class="mr-2 h-5 w-5" />
-                            Send Reset Link
+                            Kirim Tautan Atur Ulang
                         </button>
                     </Form>
     
@@ -86,17 +86,17 @@ const emailInput = ref('');
                     <div class="mt-6 flex justify-center">
                         <Link
                             :href="login()"
-                            class="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-900"
+                            class="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-900 cursor-pointer"
                         >
                             <ArrowLeft class="h-4 w-4" />
-                            Back to Sign In
+                            Kembali ke Halaman Masuk
                         </Link>
                     </div>
                 </div>
     
                 <!-- Footer -->
-                <p class="mx-auto mt-4 max-w-sm text-center text-[11px] leading-relaxed text-slate-400">
-                    Join the millions of smart investors who trust us to manage their finances. Log in to access your personalized dashboard, track your portfolio performance, and make informed investment decisions.
+                <p class="mx-auto mt-4 max-w-sm text-center text-xs leading-relaxed text-slate-400">
+                    Sistem kendali operasional & konveksi Ruang Jahit.
                 </p>
             </div>
     

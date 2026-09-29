@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { dashboard, login, register } from '@/routes';
+import { dashboard, login } from '@/routes';
 /* @chisel-registration */
 
 /* @end-chisel-registration */
@@ -32,14 +32,6 @@ import { dashboard, login, register } from '@/routes';
                     >
                         Log in
                     </Link>
-                    <Link
-                        :href="register()"
-                        class="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
-                    >
-                        Register
-                    </Link>
-                    
-                    <!-- @end-chisel-registration -->
                 </template>
             </nav>
         </header>

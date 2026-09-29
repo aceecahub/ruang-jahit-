@@ -15,6 +15,7 @@ import {
 import FilterBar, { type FilterState } from '@/components/dashboard/FilterBar.vue';
 import OverviewView from '@/components/dashboard/OverviewView.vue';
 import SalesView from '@/components/dashboard/SalesView.vue';
+import OrdersView from '@/components/dashboard/OrdersView.vue';
 import ProductionView from '@/components/dashboard/ProductionView.vue';
 import FinanceView from '@/components/dashboard/FinanceView.vue';
 import InventoryView from '@/components/dashboard/InventoryView.vue';
@@ -101,7 +102,10 @@ function handleSaveNewOrder() {
 
             <!-- Date Filter & Quick Actions -->
             <div class="flex flex-wrap items-center gap-2.5">
-                <div class="inline-flex items-center gap-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 shadow-xs">
+                <div
+                    v-if="activeTab !== 'orders' && activeTab !== 'production'"
+                    class="inline-flex items-center gap-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 shadow-xs"
+                >
                     <Calendar class="h-3.5 w-3.5 text-slate-400" />
                     <span>Periode: September 2026</span>
                 </div>
@@ -119,9 +123,10 @@ function handleSaveNewOrder() {
 
         <!-- Interactive Filter Bar -->
         <FilterBar
+            v-if="activeTab !== 'orders' && activeTab !== 'production'"
             v-model="filters"
-            :show-category-filter="['overview', 'sales', 'production', 'inventory'].includes(activeTab)"
-            :show-status-filter="['overview', 'production', 'inventory'].includes(activeTab)"
+            :show-category-filter="['overview', 'sales', 'inventory'].includes(activeTab)"
+            :show-status-filter="['overview', 'inventory'].includes(activeTab)"
             @export="handleExport"
         />
 
@@ -141,12 +146,9 @@ function handleSaveNewOrder() {
                 :category-filter="filters.category"
             />
 
-            <ProductionView
-                v-else-if="activeTab === 'production'"
+            <OrdersView
+                v-else-if="activeTab === 'orders' || activeTab === 'production'"
                 :is-dark="isDark"
-                :search-query="filters.searchQuery"
-                :status-filter="filters.status"
-                :category-filter="filters.category"
             />
 
             <FinanceView

@@ -3,7 +3,7 @@ import { router } from '@inertiajs/vue3';
 import {
     LayoutGrid,
     TrendingUp,
-    Scissors,
+    ClipboardList,
     Banknote,
     Boxes,
     Users,
@@ -14,6 +14,7 @@ import {
 export type DashboardTabKey =
     | 'overview'
     | 'sales'
+    | 'orders'
     | 'production'
     | 'finance'
     | 'inventory'
@@ -31,7 +32,7 @@ export interface DashboardTabItem {
 export const DASHBOARD_TABS: DashboardTabItem[] = [
     { key: 'overview', title: 'Ringkasan Bisnis', icon: LayoutGrid, href: '/dashboard?tab=overview' },
     { key: 'sales', title: 'Penjualan', icon: TrendingUp, href: '/dashboard?tab=sales' },
-    { key: 'production', title: 'Produksi', icon: Scissors, href: '/dashboard?tab=production' },
+    { key: 'orders', title: 'Orderan', icon: ClipboardList, href: '/dashboard?tab=orders' },
     { key: 'finance', title: 'Keuangan', icon: Banknote, href: '/dashboard?tab=finance' },
     { key: 'inventory', title: 'Inventaris & Bahan', icon: Boxes, href: '/dashboard?tab=inventory' },
     { key: 'customers', title: 'Pelanggan', icon: Users, href: '/dashboard?tab=customers' },
@@ -46,7 +47,11 @@ export function useDashboardTab() {
     function initTabFromUrl() {
         if (typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search);
-            const tabParam = params.get('tab') as DashboardTabKey;
+            let tabParam = params.get('tab') as DashboardTabKey;
+            // Backwards compatibility for 'production' -> 'orders'
+            if ((tabParam as any) === 'production') {
+                tabParam = 'orders';
+            }
             if (tabParam && DASHBOARD_TABS.some((t) => t.key === tabParam)) {
                 activeTabState.value = tabParam;
             }
@@ -54,8 +59,11 @@ export function useDashboardTab() {
     }
 
     function switchTab(tabKey: string) {
-        if (DASHBOARD_TABS.some((t) => t.key === tabKey)) {
-            const validKey = tabKey as DashboardTabKey;
+        let validKey = tabKey as DashboardTabKey;
+        if ((validKey as any) === 'production') {
+            validKey = 'orders';
+        }
+        if (DASHBOARD_TABS.some((t) => t.key === validKey)) {
             activeTabState.value = validKey;
 
             if (typeof window !== 'undefined') {

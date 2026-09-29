@@ -25,5 +25,7 @@ return [
 
     'views' => true,
 
-    'features' => [],
+    'features' => [
+        \Laravel\Fortify\Features::resetPasswords(),
+    ],
 ];

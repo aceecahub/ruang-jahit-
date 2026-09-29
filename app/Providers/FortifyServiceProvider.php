@@ -47,6 +47,15 @@ class FortifyServiceProvider extends ServiceProvider
             'status' => $request->session()->get('status'),
         ]));
 
+        Fortify::requestPasswordResetLinkView(fn (Request $request) => Inertia::render('auth/ForgotPassword', [
+            'status' => $request->session()->get('status'),
+        ]));
+
+        Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/ResetPassword', [
+            'email' => $request->input('email'),
+            'token' => $request->route('token'),
+        ]));
+
         RateLimiter::for('login', function (Request $request) {
             $key = Str::transliterate(
                 Str::lower((string) $request->input(Fortify::username())).'|'.$request->ip()
