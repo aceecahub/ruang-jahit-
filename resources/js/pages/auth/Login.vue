@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Form, Head } from '@inertiajs/vue3';
+import { Form, Head, Link } from '@inertiajs/vue3';
 
 import InputError from '@/components/InputError.vue';
 import { Spinner } from '@/components/ui/spinner';
@@ -111,12 +111,20 @@ const usernameInput = ref('');
                                 <Lock class="h-5 w-5 text-slate-400" />
 
                                 <div class="flex flex-1 flex-col">
-                                    <label
-                                        for="password"
-                                        class="text-[10px] font-medium text-slate-500"
-                                    >
-                                        Password
-                                    </label>
+                                    <div class="flex items-center justify-between">
+                                        <label
+                                            for="password"
+                                            class="text-[10px] font-medium text-slate-500"
+                                        >
+                                            Password
+                                        </label>
+                                        <Link
+                                            href="/forgot-password"
+                                            class="text-[11px] font-medium text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                                        >
+                                            Lupa password?
+                                        </Link>
+                                    </div>
 
                                     <input
                                         id="password"

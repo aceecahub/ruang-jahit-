@@ -349,8 +349,8 @@ const chartOptions = computed(() => ({
                 </div>
 
                 <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
-                    <button @click="emit('navigate', 'production')" class="w-full text-center text-blue-600 dark:text-blue-400 font-semibold hover:underline cursor-pointer">
-                        Lihat Alur Kerja Produksi →
+                    <button @click="emit('navigate', 'orders')" class="w-full text-center text-blue-600 dark:text-blue-400 font-semibold hover:underline cursor-pointer">
+                        Lihat Data Orderan & Tracking →
                     </button>
                 </div>
             </div>
