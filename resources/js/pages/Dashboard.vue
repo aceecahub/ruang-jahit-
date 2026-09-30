@@ -39,6 +39,7 @@ const props = defineProps<{
     initialTab?: string;
     customKpis?: any;
     customOrders?: any;
+<<<<<<< HEAD
 
     orderanMasuk: number;
     totalKuantitas: number;
@@ -80,6 +81,12 @@ const props = defineProps<{
         per_halaman: number;
         total_halaman: number;
     };
+=======
+    orderanMasuk: Number;
+    totalKuantitas: Number;
+    totalHpp: Number;
+    totalJual: Number;
+>>>>>>> 37ac52e (dynamic data card orderan)
 }>();
 
 // Theme tracking
@@ -231,10 +238,13 @@ function handleSaveNewOrder() {
                 :total-kuantitas="props.totalKuantitas"
                 :total-hpp="props.totalHpp"
                 :total-jual="props.totalJual"
+<<<<<<< HEAD
                 :distribusi-model="props.distribusiModel"
                 :trend-kuantitas="props.trendKuantitas"
                 :order-list="props.orderList"
                 :order-pagination="props.orderPagination"
+=======
+>>>>>>> 37ac52e (dynamic data card orderan)
             />
 
             <!-- FINANCE -->
