@@ -39,6 +39,10 @@ const props = defineProps<{
     initialTab?: string;
     customKpis?: any;
     customOrders?: any;
+    orderanMasuk: Number;
+    totalKuantitas: Number;
+    totalHpp: Number;
+    totalJual: Number;
 }>();
 
 // Theme tracking
@@ -149,6 +153,10 @@ function handleSaveNewOrder() {
             <OrdersView
                 v-else-if="activeTab === 'orders' || activeTab === 'production'"
                 :is-dark="isDark"
+                :orderan-data="props.orderanMasuk"
+                :total-kuantitas="props.totalKuantitas"
+                :total-hpp="props.totalHpp"
+                :total-jual="props.totalJual"
             />
 
             <FinanceView

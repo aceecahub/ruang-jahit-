@@ -57,7 +57,9 @@ export const ORDER_TYPE_LABELS = [
     'Celana & Rok Formal',
 ];
 
-export const TODAY_DATE = '2026-09-29';
+export const TODAY_DATE = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Jakarta',
+}).format(new Date());
 
 // 60+ Realistic Convection Orders Dataset
 export const DUMMY_ORDERS_DATA: OrderRecord[] = [
