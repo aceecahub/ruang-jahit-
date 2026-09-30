@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { router } from "@inertiajs/vue3";
+<<<<<<< HEAD
 import { ref, computed, watch, nextTick } from "vue";
 
+=======
+import { ref, computed, watch } from "vue";
+>>>>>>> 37ac52e (dynamic data card orderan)
 import {
     Calendar,
     ChevronLeft,
@@ -99,6 +103,7 @@ type OrderPagination = {
 
 const props = defineProps<{
     isDark?: boolean;
+<<<<<<< HEAD
 
     orderanData?: number | string;
 
@@ -191,6 +196,38 @@ function formatMonth(dateString: string): string {
    FILTER PERIODE
    ============================================================ */
 
+=======
+    orderanData?: any;
+    totalKuantitas?: any;
+    totalHpp?: any;
+    totalJual?: any;
+}>();
+
+function fetchOrderan() {
+    const filterMap: Record<PeriodPreset, string> = {
+        today: "day",
+        this_week: "week",
+        this_month: "month",
+        this_year: "year",
+        custom: "custom",
+    };
+
+    router.get("/dashboard", {
+            filter: filterMap[activePreset.value],
+            tanggal_awal: startDate.value,
+            tanggal_akhir: endDate.value,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ["orderanMasuk", "totalKuantitas", "totalHpp", "totalJual", "filter", "tanggalAwal", "tanggalAkhir"],
+        },
+    );
+}
+
+// --- 1. Filter Periode State ---
+>>>>>>> 37ac52e (dynamic data card orderan)
 type PeriodPreset =
     | "today"
     | "this_week"
@@ -392,14 +429,50 @@ function applyPreset(preset: PeriodPreset) {
         startDate.value = TODAY_DATE;
 
         endDate.value = TODAY_DATE;
+<<<<<<< HEAD
 
         currentPage.value = 1;
 
         fetchOrderan();
+=======
+        fetchOrderan();
+    } else if (preset === "this_week") {
+        // Monday of current week
+        const day = base.getDay();
+        const diffToMon = day === 0 ? -6 : 1 - day;
+        const mon = new Date(base);
+        mon.setDate(base.getDate() + diffToMon);
+        const sun = new Date(mon);
+        sun.setDate(mon.getDate() + 6);
+
+        startDate.value = mon.toISOString().slice(0, 10);
+        endDate.value = sun.toISOString().slice(0, 10);
+        fetchOrderan();
+    } else if (preset === "this_month") {
+        const y = base.getFullYear();
+        const m = String(base.getMonth() + 1).padStart(2, "0");
+        const lastDay = new Date(y, base.getMonth() + 1, 0).getDate();
+
+        startDate.value = `${y}-${m}-01`;
+        endDate.value = `${y}-${m}-${lastDay}`;
+        fetchOrderan();
+    } else if (preset === "this_year") {
+        const y = base.getFullYear();
+        startDate.value = `${y}-01-01`;
+        endDate.value = `${y}-12-31`;
+        fetchOrderan();
+    } else if (preset === "custom") {
+        startDate.value = customStartInput.value;
+        endDate.value = customEndInput.value;
+        fetchOrderan();
+    }
+}
+>>>>>>> 37ac52e (dynamic data card orderan)
 
         return;
     }
 
+<<<<<<< HEAD
     if (preset === "this_week") {
         const day = base.getDay();
 
@@ -463,6 +536,25 @@ function applyPreset(preset: PeriodPreset) {
 
         fetchOrderan();
     }
+=======
+    activePreset.value = "custom";
+    startDate.value = customStartInput.value;
+    endDate.value = customEndInput.value;
+
+    router.get("/dashboard", {
+            filter: "custom",
+            tanggal_awal: startDate.value,
+            tanggal_akhir: endDate.value,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        }
+    );
+
+    toast.success("Rentang tanggal khusus berhasil diterapkan");
+>>>>>>> 37ac52e (dynamic data card orderan)
 }
 
 /* ============================================================
@@ -1724,8 +1816,13 @@ function openOrderDetail(order: OrderListItem) {
 
         <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <KpiCard
+<<<<<<< HEAD
                 title="Job Order"
                 :value="Number(props.orderanData ?? 0)"
+=======
+                title="Total Orderan Masuk"
+                :value="Number(orderanData ?? 0)"
+>>>>>>> 37ac52e (dynamic data card orderan)
                 unit="Order"
                 type="number"
                 period-text="Berdasarkan tgl_order periode"
@@ -1736,8 +1833,13 @@ function openOrderDetail(order: OrderListItem) {
             />
 
             <KpiCard
+<<<<<<< HEAD
                 title="Kuantitas Order"
                 :value="Number(props.totalKuantitas ?? 0)"
+=======
+                title="Total Kuantitas Pesanan"
+                :value="Number(totalKuantitas ?? 0)"
+>>>>>>> 37ac52e (dynamic data card orderan)
                 unit="Pcs"
                 type="number"
                 period-text="Akumulasi total_qty pakaian"
@@ -1747,23 +1849,43 @@ function openOrderDetail(order: OrderListItem) {
                 icon-color="text-purple-600 dark:text-purple-400"
             />
 
+<<<<<<< HEAD
             <KpiCard
                 title="Total HPP"
                 :value="Number(props.totalHpp ?? 0)"
                 type="currency"
                 period-text="Akumulasi total_hpp"
                 tooltip="Total modal produksi berdasarkan HPP."
+=======
+            <!-- 7. Total HPP -->
+            <KpiCard
+                title="Total HPP Produksi"
+                :value="Number(totalHpp ?? 0)"
+                type="currency"
+                period-text="Akumulasi tot_hpp bahan & jahit"
+                tooltip="Total modal bahan baku kain dan upah tenaga kerja penjahit."
+>>>>>>> 37ac52e (dynamic data card orderan)
                 :icon="Layers"
                 icon-bg="bg-slate-100 dark:bg-slate-800"
                 icon-color="text-slate-600 dark:text-slate-300"
             />
 
+<<<<<<< HEAD
             <KpiCard
                 title="Total Penjualan"
                 :value="Number(props.totalJual ?? 0)"
                 type="currency"
                 period-text="Akumulasi total_jual"
                 tooltip="Total nilai penjualan dari seluruh orderan terfilter."
+=======
+            <!-- 6. Total Penjualan -->
+            <KpiCard
+                title="Total Nilai Penjualan"
+                :value="Number(totalJual ?? 0)"
+                type="currency"
+                period-text="Akumulasi total_jual pesanan"
+                tooltip="Total omzet kotor dari seluruh orderan terfilter."
+>>>>>>> 37ac52e (dynamic data card orderan)
                 :icon="Banknote"
                 icon-bg="bg-blue-50 dark:bg-blue-950/40"
                 icon-color="text-blue-600 dark:text-blue-400"
