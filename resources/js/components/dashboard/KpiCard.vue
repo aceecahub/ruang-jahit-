@@ -46,6 +46,7 @@ const formattedValue = computed(() => {
     const value = Number(props.value ?? 0);
 
     if (!Number.isFinite(value)) {
+<<<<<<< HEAD
         return "0";
     }
 
@@ -96,6 +97,20 @@ const compactValue = computed(() => {
     }
 
     return compacted;
+=======
+        return '0';
+    }
+
+    if (props.type === 'currency') {
+        return formatRupiah(value);
+    }
+
+    if (props.type === 'percent') {
+        return `${value.toFixed(1)}%`;
+    }
+
+    return formatNumber(value);
+>>>>>>> 37ac52e (dynamic data card orderan)
 });
 </script>
 
