@@ -24,13 +24,21 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const formattedValue = computed(() => {
+    const value = Number(props.value ?? 0);
+
+    if (!Number.isFinite(value)) {
+        return '0';
+    }
+
     if (props.type === 'currency') {
-        return formatRupiah(props.value);
+        return formatRupiah(value);
     }
+
     if (props.type === 'percent') {
-        return `${props.value.toFixed(1)}%`;
+        return `${value.toFixed(1)}%`;
     }
-    return formatNumber(props.value);
+
+    return formatNumber(value);
 });
 </script>
 
