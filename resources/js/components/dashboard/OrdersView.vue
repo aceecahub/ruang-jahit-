@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { router } from "@inertiajs/vue3";
 import { ref, computed, watch } from "vue";
 import {
     Calendar,
@@ -77,7 +78,34 @@ ChartJS.register(
 
 const props = defineProps<{
     isDark?: boolean;
+    orderanData?: any;
+    totalKuantitas?: any;
+    totalHpp?: any;
+    totalJual?: any;
 }>();
+
+function fetchOrderan() {
+    const filterMap: Record<PeriodPreset, string> = {
+        today: "day",
+        this_week: "week",
+        this_month: "month",
+        this_year: "year",
+        custom: "custom",
+    };
+
+    router.get("/dashboard", {
+            filter: filterMap[activePreset.value],
+            tanggal_awal: startDate.value,
+            tanggal_akhir: endDate.value,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ["orderanMasuk", "totalKuantitas", "totalHpp", "totalJual", "filter", "tanggalAwal", "tanggalAkhir"],
+        },
+    );
+}
 
 // --- 1. Filter Periode State ---
 type PeriodPreset =
@@ -109,6 +137,7 @@ function applyPreset(preset: PeriodPreset) {
     if (preset === "today") {
         startDate.value = TODAY_DATE;
         endDate.value = TODAY_DATE;
+        fetchOrderan();
     } else if (preset === "this_week") {
         // Monday of current week
         const day = base.getDay();
@@ -120,6 +149,7 @@ function applyPreset(preset: PeriodPreset) {
 
         startDate.value = mon.toISOString().slice(0, 10);
         endDate.value = sun.toISOString().slice(0, 10);
+        fetchOrderan();
     } else if (preset === "this_month") {
         const y = base.getFullYear();
         const m = String(base.getMonth() + 1).padStart(2, "0");
@@ -127,13 +157,16 @@ function applyPreset(preset: PeriodPreset) {
 
         startDate.value = `${y}-${m}-01`;
         endDate.value = `${y}-${m}-${lastDay}`;
+        fetchOrderan();
     } else if (preset === "this_year") {
         const y = base.getFullYear();
         startDate.value = `${y}-01-01`;
         endDate.value = `${y}-12-31`;
+        fetchOrderan();
     } else if (preset === "custom") {
         startDate.value = customStartInput.value;
         endDate.value = customEndInput.value;
+        fetchOrderan();
     }
 }
 
@@ -143,9 +176,23 @@ function applyCustomRange() {
         toast.error("Tanggal mulai tidak boleh lebih besar dari tanggal akhir");
         return;
     }
+
     activePreset.value = "custom";
     startDate.value = customStartInput.value;
     endDate.value = customEndInput.value;
+
+    router.get("/dashboard", {
+            filter: "custom",
+            tanggal_awal: startDate.value,
+            tanggal_akhir: endDate.value,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        }
+    );
+
     toast.success("Rentang tanggal khusus berhasil diterapkan");
 }
 
@@ -727,21 +774,9 @@ function openOrderDetail(order: OrderRecord) {
             <!-- 1. Total Orderan -->
             <KpiCard
                 title="Total Orderan Masuk"
-                :value="currentKpis.totalOrders"
+                :value="Number(orderanData ?? 0)"
                 unit="Order"
                 type="number"
-                :change="
-                    calculateGrowth(
-                        currentKpis.totalOrders,
-                        previousPeriodKpis.totalOrders,
-                    )
-                "
-                :is-positive="
-                    (calculateGrowth(
-                        currentKpis.totalOrders,
-                        previousPeriodKpis.totalOrders,
-                    ) ?? 0) >= 0
-                "
                 period-text="Berdasarkan tgl_order periode"
                 tooltip="Jumlah total lembar pesanan masuk pada periode yang dipilih."
                 :icon="ShoppingBag"
@@ -751,21 +786,9 @@ function openOrderDetail(order: OrderRecord) {
             <!-- 5. Total Kuantitas -->
             <KpiCard
                 title="Total Kuantitas Pesanan"
-                :value="currentKpis.totalQty"
+                :value="Number(totalKuantitas ?? 0)"
                 unit="Pcs"
                 type="number"
-                :change="
-                    calculateGrowth(
-                        currentKpis.totalQty,
-                        previousPeriodKpis.totalQty,
-                    )
-                "
-                :is-positive="
-                    (calculateGrowth(
-                        currentKpis.totalQty,
-                        previousPeriodKpis.totalQty,
-                    ) ?? 0) >= 0
-                "
                 period-text="Akumulasi total_qty pakaian"
                 tooltip="Jumlah total fisik pakaian yang dipesan pelanggan."
                 :icon="Boxes"
@@ -773,47 +796,28 @@ function openOrderDetail(order: OrderRecord) {
                 icon-color="text-purple-600 dark:text-purple-400"
             />
 
-            <!-- 6. Total Penjualan -->
-            <KpiCard
-                title="Total Nilai Penjualan"
-                :value="currentKpis.totalJual"
-                type="currency"
-                :change="
-                    calculateGrowth(
-                        currentKpis.totalJual,
-                        previousPeriodKpis.totalJual,
-                    )
-                "
-                :is-positive="
-                    (calculateGrowth(
-                        currentKpis.totalJual,
-                        previousPeriodKpis.totalJual,
-                    ) ?? 0) >= 0
-                "
-                period-text="Akumulasi total_jual pesanan"
-                tooltip="Total omzet kotor dari seluruh orderan terfilter."
-                :icon="Banknote"
-                icon-bg="bg-blue-50 dark:bg-blue-950/40"
-                icon-color="text-blue-600 dark:text-blue-400"
-            />
-
             <!-- 7. Total HPP -->
             <KpiCard
                 title="Total HPP Produksi"
-                :value="currentKpis.totalHpp"
+                :value="Number(totalHpp ?? 0)"
                 type="currency"
-                :change="
-                    calculateGrowth(
-                        currentKpis.totalHpp,
-                        previousPeriodKpis.totalHpp,
-                    )
-                "
-                :is-positive="true"
                 period-text="Akumulasi tot_hpp bahan & jahit"
                 tooltip="Total modal bahan baku kain dan upah tenaga kerja penjahit."
                 :icon="Layers"
                 icon-bg="bg-slate-100 dark:bg-slate-800"
                 icon-color="text-slate-600 dark:text-slate-300"
+            />
+
+            <!-- 6. Total Penjualan -->
+            <KpiCard
+                title="Total Nilai Penjualan"
+                :value="Number(totalJual ?? 0)"
+                type="currency"
+                period-text="Akumulasi total_jual pesanan"
+                tooltip="Total omzet kotor dari seluruh orderan terfilter."
+                :icon="Banknote"
+                icon-bg="bg-blue-50 dark:bg-blue-950/40"
+                icon-color="text-blue-600 dark:text-blue-400"
             />
         </section>
 
