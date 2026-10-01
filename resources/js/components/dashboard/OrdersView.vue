@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { router } from "@inertiajs/vue3";
 import { ref, computed, watch } from "vue";
+
 import {
     Calendar,
     ChevronLeft,
@@ -21,21 +22,15 @@ import {
 import KpiCard from "./KpiCard.vue";
 
 import {
-    type OrderRecord,
-    DUMMY_ORDERS_DATA,
     ORDER_STATUS_MAP,
-    calculateOrderKpis,
-    isOrderCompleted,
     isOrderOverdue,
     isOrderApproaching,
-    exportOrdersToCsv,
 } from "@/data/orderData";
 
 import { formatNumber, formatRupiah, formatDateIndo } from "@/lib/formatters";
 
 import { toast } from "vue-sonner";
 
-// Sheet / Drawer
 import {
     Sheet,
     SheetContent,
@@ -44,7 +39,6 @@ import {
     SheetDescription,
 } from "@/components/ui/sheet";
 
-// Chart.js
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -74,12 +68,41 @@ ChartJS.register(
    PROPS
    ============================================================ */
 
+type OrderListItem = {
+    nomor_baris: number;
+    id_order: number;
+    no_order: string;
+    tgl_order: string;
+    no_po: string;
+    kd_cus: string;
+    nm_cus: string;
+    jenis_order: number;
+    nama_jenis: string;
+    status: number;
+    nama_status: string;
+    total_qty: number;
+    total_hpp: number;
+    total_jual: number;
+    tgl_estimasi: string;
+};
+
+type OrderPagination = {
+    total_data: number;
+    halaman: number;
+    per_halaman: number;
+    total_halaman: number;
+};
+
 const props = defineProps<{
     isDark?: boolean;
-    orderanData?: any;
-    totalKuantitas?: any;
-    totalHpp?: any;
-    totalJual?: any;
+
+    orderanData?: number | string;
+
+    totalKuantitas?: number | string;
+
+    totalHpp?: number | string;
+
+    totalJual?: number | string;
 
     distribusiModel?: Array<{
         nm_model: string;
@@ -91,17 +114,16 @@ const props = defineProps<{
         tanggal: string;
         total_qty: number;
     }>;
+
+    orderList?: OrderListItem[];
+
+    orderPagination?: OrderPagination;
 }>();
+
 /* ============================================================
    HELPER TANGGAL
    ============================================================ */
 
-/**
- * Mengubah Date menjadi YYYY-MM-DD.
- *
- * Tidak menggunakan toISOString()
- * supaya tidak terkena pergeseran timezone.
- */
 function formatDateToYmd(date: Date): string {
     const year = date.getFullYear();
 
@@ -112,25 +134,14 @@ function formatDateToYmd(date: Date): string {
     return `${year}-${month}-${day}`;
 }
 
-/**
- * Tanggal hari ini berdasarkan browser/computer user.
- *
- * Tidak lagi hardcode 2026-09-29.
- */
 const TODAY_DATE = formatDateToYmd(new Date());
 
-/**
- * Membuat Date dari YYYY-MM-DD.
- */
 function parseDate(dateString: string): Date {
     const [year, month, day] = dateString.split("-").map(Number);
 
     return new Date(year, month - 1, day);
 }
 
-/**
- * Menambah hari.
- */
 function addDays(date: Date, amount: number): Date {
     const result = new Date(date);
 
@@ -139,9 +150,6 @@ function addDays(date: Date, amount: number): Date {
     return result;
 }
 
-/**
- * Selisih hari.
- */
 function getDayDifference(start: Date, end: Date): number {
     const startTime = new Date(
         start.getFullYear(),
@@ -158,12 +166,6 @@ function getDayDifference(start: Date, end: Date): number {
     return Math.floor((endTime - startTime) / (1000 * 60 * 60 * 24));
 }
 
-/**
- * Format tanggal singkat.
- *
- * Contoh:
- * 2026-09-01 -> 1 Sep
- */
 function formatShortDate(dateString: string): string {
     const date = parseDate(dateString);
 
@@ -173,12 +175,6 @@ function formatShortDate(dateString: string): string {
     }).format(date);
 }
 
-/**
- * Format nama bulan.
- *
- * Contoh:
- * 2026-09-01 -> Sep
- */
 function formatMonth(dateString: string): string {
     const date = parseDate(dateString);
 
@@ -200,9 +196,6 @@ type PeriodPreset =
 
 const activePreset = ref<PeriodPreset>("this_month");
 
-/**
- * Default periode = bulan sekarang.
- */
 const todayDateObject = parseDate(TODAY_DATE);
 
 const defaultYear = todayDateObject.getFullYear();
@@ -219,17 +212,31 @@ const startDate = ref<string>(`${defaultYear}-${defaultMonth}-01`);
 
 const endDate = ref<string>(`${defaultYear}-${defaultMonth}-${defaultLastDay}`);
 
-/**
- * Input sementara untuk custom range.
- */
 const customStartInput = ref<string>(`${defaultYear}-${defaultMonth}-01`);
 
 const customEndInput = ref<string>(TODAY_DATE);
 
-/**
- * Offset navigasi periode.
- */
 const periodOffset = ref(0);
+
+/* ============================================================
+   TABLE FILTER STATE
+   ============================================================ */
+
+const tableSearch = ref("");
+
+const statusFilter = ref("ALL");
+
+const typeFilter = ref("ALL");
+
+const sortBy = ref<
+    "tgl_order" | "no_order" | "total_jual" | "total_qty" | "tgl_estimasi"
+>("tgl_order");
+
+const sortOrder = ref<"asc" | "desc">("desc");
+
+const perPage = ref(10);
+
+const currentPage = ref(1);
 
 /* ============================================================
    FETCH BACKEND
@@ -248,12 +255,30 @@ function fetchOrderan() {
         "/dashboard",
         {
             filter: filterMap[activePreset.value],
+
             tanggal_awal: startDate.value,
+
             tanggal_akhir: endDate.value,
+
+            cari: tableSearch.value.trim() || null,
+
+            status: statusFilter.value === "ALL" ? null : statusFilter.value,
+
+            jenis_order: typeFilter.value === "ALL" ? null : typeFilter.value,
+
+            halaman: currentPage.value,
+
+            per_halaman: perPage.value,
+
+            urut_kolom: sortBy.value,
+
+            urut_arah: sortOrder.value.toUpperCase(),
         },
         {
             preserveState: true,
+
             preserveScroll: true,
+
             replace: true,
         },
     );
@@ -270,24 +295,17 @@ function applyPreset(preset: PeriodPreset) {
 
     const base = parseDate(TODAY_DATE);
 
-    /* =========================
-       HARI INI
-       ========================= */
-
     if (preset === "today") {
         startDate.value = TODAY_DATE;
 
         endDate.value = TODAY_DATE;
 
+        currentPage.value = 1;
+
         fetchOrderan();
 
         return;
     }
-
-    /* =========================
-       MINGGU INI
-       Senin - Minggu
-       ========================= */
 
     if (preset === "this_week") {
         const day = base.getDay();
@@ -304,14 +322,12 @@ function applyPreset(preset: PeriodPreset) {
 
         endDate.value = formatDateToYmd(sunday);
 
+        currentPage.value = 1;
+
         fetchOrderan();
 
         return;
     }
-
-    /* =========================
-       BULAN INI
-       ========================= */
 
     if (preset === "this_month") {
         const year = base.getFullYear();
@@ -324,14 +340,12 @@ function applyPreset(preset: PeriodPreset) {
 
         endDate.value = `${year}-${month}-${lastDay}`;
 
+        currentPage.value = 1;
+
         fetchOrderan();
 
         return;
     }
-
-    /* =========================
-       TAHUN INI
-       ========================= */
 
     if (preset === "this_year") {
         const year = base.getFullYear();
@@ -340,19 +354,19 @@ function applyPreset(preset: PeriodPreset) {
 
         endDate.value = `${year}-12-31`;
 
+        currentPage.value = 1;
+
         fetchOrderan();
 
         return;
     }
 
-    /* =========================
-       CUSTOM
-       ========================= */
-
     if (preset === "custom") {
         startDate.value = customStartInput.value;
 
         endDate.value = customEndInput.value;
+
+        currentPage.value = 1;
 
         fetchOrderan();
     }
@@ -385,6 +399,8 @@ function applyCustomRange() {
 
     endDate.value = customEndInput.value;
 
+    currentPage.value = 1;
+
     fetchOrderan();
 
     toast.success("Rentang tanggal khusus berhasil diterapkan.");
@@ -415,6 +431,20 @@ function resetPeriod() {
 
     customEndInput.value = TODAY_DATE;
 
+    currentPage.value = 1;
+
+    tableSearch.value = "";
+
+    statusFilter.value = "ALL";
+
+    typeFilter.value = "ALL";
+
+    sortBy.value = "tgl_order";
+
+    sortOrder.value = "desc";
+
+    perPage.value = 10;
+
     fetchOrderan();
 
     toast.info("Filter periode dikembalikan ke Bulan Ini.");
@@ -433,10 +463,6 @@ function navigatePeriod(direction: -1 | 1) {
 
     const base = parseDate(TODAY_DATE);
 
-    /* =========================
-       HARI
-       ========================= */
-
     if (activePreset.value === "today") {
         const target = new Date(base);
 
@@ -447,11 +473,9 @@ function navigatePeriod(direction: -1 | 1) {
         startDate.value = date;
 
         endDate.value = date;
-    } else if (activePreset.value === "this_week") {
-        /* =========================
-       MINGGU
-       ========================= */
+    }
 
+    if (activePreset.value === "this_week") {
         const day = base.getDay();
 
         const diffToMonday = day === 0 ? -6 : 1 - day;
@@ -465,11 +489,9 @@ function navigatePeriod(direction: -1 | 1) {
         startDate.value = formatDateToYmd(monday);
 
         endDate.value = formatDateToYmd(sunday);
-    } else if (activePreset.value === "this_month") {
-        /* =========================
-       BULAN
-       ========================= */
+    }
 
+    if (activePreset.value === "this_month") {
         const targetDate = new Date(
             base.getFullYear(),
             base.getMonth() + periodOffset.value,
@@ -485,11 +507,9 @@ function navigatePeriod(direction: -1 | 1) {
         startDate.value = `${year}-${month}-01`;
 
         endDate.value = `${year}-${month}-${lastDay}`;
-    } else if (activePreset.value === "this_year") {
-        /* =========================
-       TAHUN
-       ========================= */
+    }
 
+    if (activePreset.value === "this_year") {
         const year = base.getFullYear() + periodOffset.value;
 
         startDate.value = `${year}-01-01`;
@@ -497,234 +517,208 @@ function navigatePeriod(direction: -1 | 1) {
         endDate.value = `${year}-12-31`;
     }
 
-    /**
-     * Setelah pindah periode,
-     * ambil data backend lagi.
-     */
+    currentPage.value = 1;
+
     fetchOrderan();
 }
 
 /* ============================================================
-   DATA ORDER BERDASARKAN PERIODE
+   BACKEND TABLE DATA
    ============================================================ */
 
-const filteredOrdersByPeriod = computed(() => {
-    return DUMMY_ORDERS_DATA.filter((order) => {
-        const orderDate = String(order.tgl_order).slice(0, 10);
-
-        return orderDate >= startDate.value && orderDate <= endDate.value;
-    });
+const paginatedOrders = computed(() => {
+    return props.orderList ?? [];
 });
 
-const orderModelDistributionData = computed(() => ({
-    labels: (props.distribusiModel ?? []).map((item) => item.nm_model),
-
-    datasets: [
-        {
-            data: (props.distribusiModel ?? []).map((item) =>
-                Number(item.total_qty),
-            ),
-
-            backgroundColor: [
-                "#2563eb",
-                "#10b981",
-                "#f59e0b",
-                "#8b5cf6",
-                "#ec4899",
-                "#06b6d4",
-                "#f97316",
-                "#14b8a6",
-                "#a855f7",
-                "#64748b",
-            ],
-
-            borderWidth: 2,
-            borderColor: props.isDark ? "#0f172a" : "#ffffff",
-        },
-    ],
-}));
-
-/* ============================================================
-   PREVIOUS PERIOD KPI
-   ============================================================ */
-
-const previousPeriodKpis = computed(() => {
-    const start = parseDate(startDate.value);
-
-    const end = parseDate(endDate.value);
-
-    const duration = getDayDifference(start, end) + 1;
-
-    const previousEnd = addDays(start, -1);
-
-    const previousStart = addDays(previousEnd, -(duration - 1));
-
-    const previousStartString = formatDateToYmd(previousStart);
-
-    const previousEndString = formatDateToYmd(previousEnd);
-
-    const previousOrders = DUMMY_ORDERS_DATA.filter((order) => {
-        const date = String(order.tgl_order).slice(0, 10);
-
-        return date >= previousStartString && date <= previousEndString;
-    });
-
-    return calculateOrderKpis(previousOrders, TODAY_DATE);
+const totalPages = computed(() => {
+    return props.orderPagination?.total_halaman ?? 1;
 });
 
-/* ============================================================
-   CURRENT KPI
-   ============================================================ */
-
-const currentKpis = computed(() => {
-    return calculateOrderKpis(filteredOrdersByPeriod.value, TODAY_DATE);
+const totalData = computed(() => {
+    return props.orderPagination?.total_data ?? 0;
 });
 
-/* ============================================================
-   GROWTH
-   ============================================================ */
-
-function calculateGrowth(
-    current: number,
-    previous: number,
-): number | undefined {
-    if (!previous || previous <= 0) {
-        return undefined;
+const displayedFrom = computed(() => {
+    if (totalData.value === 0) {
+        return 0;
     }
 
-    const growth = ((current - previous) / previous) * 100;
+    return (currentPage.value - 1) * perPage.value + 1;
+});
 
-    return Number(growth.toFixed(1));
-}
+const displayedTo = computed(() => {
+    if (totalData.value === 0) {
+        return 0;
+    }
 
-/* ============================================================
-   TABLE FILTER
-   ============================================================ */
-
-const tableSearch = ref("");
-
-const statusFilter = ref("ALL");
-
-const typeFilter = ref("ALL");
-
-const sortBy = ref<"tgl_order" | "total_jual" | "total_qty" | "tgl_estimasi">(
-    "tgl_order",
-);
-
-const sortOrder = ref<"asc" | "desc">("desc");
-
-const perPage = ref(10);
-
-const currentPage = ref(1);
+    return Math.min(currentPage.value * perPage.value, totalData.value);
+});
 
 /* ============================================================
    SORTING
    ============================================================ */
 
 function toggleSort(
-    col: "tgl_order" | "total_jual" | "total_qty" | "tgl_estimasi",
+    column:
+        | "tgl_order"
+        | "no_order"
+        | "total_jual"
+        | "total_qty"
+        | "tgl_estimasi",
 ) {
-    if (sortBy.value === col) {
+    if (sortBy.value === column) {
         sortOrder.value = sortOrder.value === "asc" ? "desc" : "asc";
     } else {
-        sortBy.value = col;
+        sortBy.value = column;
 
         sortOrder.value = "desc";
     }
+
+    currentPage.value = 1;
+
+    fetchOrderan();
 }
 
 /* ============================================================
-   TABLE ORDERS
+   TABLE FILTER WATCH
    ============================================================ */
 
-const tableOrders = computed(() => {
-    let result = [...filteredOrdersByPeriod.value];
+watch([statusFilter, typeFilter, perPage], () => {
+    currentPage.value = 1;
 
-    /* SEARCH */
+    fetchOrderan();
+});
 
-    if (tableSearch.value) {
-        const query = tableSearch.value.toLowerCase();
+/* ============================================================
+   SEARCH DEBOUNCE
+   ============================================================ */
 
-        result = result.filter((order) => {
-            return (
-                order.no_order.toLowerCase().includes(query) ||
-                (order.no_po && order.no_po.toLowerCase().includes(query)) ||
-                order.nm_cus.toLowerCase().includes(query) ||
-                order.kd_cus.toLowerCase().includes(query)
-            );
-        });
+let searchTimer: ReturnType<typeof setTimeout> | null = null;
+
+watch(tableSearch, () => {
+    if (searchTimer) {
+        clearTimeout(searchTimer);
     }
 
-    /* STATUS */
+    searchTimer = setTimeout(() => {
+        currentPage.value = 1;
 
-    if (statusFilter.value !== "ALL") {
-        result = result.filter(
-            (order) => String(order.status) === statusFilter.value,
-        );
-    }
-
-    /* JENIS ORDER */
-
-    if (typeFilter.value !== "ALL") {
-        result = result.filter(
-            (order) => order.jenis_order === typeFilter.value,
-        );
-    }
-
-    /* SORTING */
-
-    result.sort((a, b) => {
-        const valA = a[sortBy.value];
-
-        const valB = b[sortBy.value];
-
-        if (typeof valA === "string") {
-            return sortOrder.value === "asc"
-                ? valA.localeCompare(valB as string)
-                : (valB as string).localeCompare(valA);
-        }
-
-        return sortOrder.value === "asc"
-            ? (valA as number) - (valB as number)
-            : (valB as number) - (valA as number);
-    });
-
-    return result;
+        fetchOrderan();
+    }, 400);
 });
 
 /* ============================================================
    PAGINATION
    ============================================================ */
 
-const totalPages = computed(
-    () => Math.ceil(tableOrders.value.length / perPage.value) || 1,
-);
+function goToPage(page: number) {
+    if (page < 1 || page > totalPages.value || page === currentPage.value) {
+        return;
+    }
 
-const paginatedOrders = computed(() => {
-    const start = (currentPage.value - 1) * perPage.value;
+    currentPage.value = page;
 
-    return tableOrders.value.slice(start, start + perPage.value);
+    fetchOrderan();
+}
+
+function nextPage() {
+    if (currentPage.value < totalPages.value) {
+        currentPage.value += 1;
+
+        fetchOrderan();
+    }
+}
+
+function previousPage() {
+    if (currentPage.value > 1) {
+        currentPage.value -= 1;
+
+        fetchOrderan();
+    }
+}
+
+/* ============================================================
+   TYPE OPTIONS
+   ============================================================ */
+
+const orderTypeOptions = computed(() => {
+    const map = new Map<number, string>();
+
+    for (const order of props.orderList ?? []) {
+        if (order.jenis_order !== null && order.jenis_order !== undefined) {
+            map.set(
+                Number(order.jenis_order),
+                order.nama_jenis || `Jenis ${order.jenis_order}`,
+            );
+        }
+    }
+
+    return Array.from(map.entries()).map(([value, label]) => ({
+        value,
+        label,
+    }));
 });
-
-watch(
-    [tableSearch, statusFilter, typeFilter, perPage, startDate, endDate],
-    () => {
-        currentPage.value = 1;
-    },
-);
 
 /* ============================================================
    CSV EXPORT
    ============================================================ */
 
+function escapeCsv(value: unknown): string {
+    const stringValue =
+        value === null || value === undefined ? "" : String(value);
+
+    return `"${stringValue.replace(/"/g, '""')}"`;
+}
+
 function triggerCsvExport() {
-    if (filteredOrdersByPeriod.value.length === 0) {
+    if (totalData.value === 0) {
         toast.warning("Tidak ada orderan pada periode ini untuk diekspor.");
 
         return;
     }
 
-    const csvContent = exportOrdersToCsv(filteredOrdersByPeriod.value);
+    /*
+     * Export mengikuti data yang sedang
+     * tersedia di halaman saat ini.
+     *
+     * Untuk export seluruh hasil filter,
+     * gunakan branch @bagian = 'export'
+     * di stored procedure melalui endpoint
+     * export terpisah.
+     */
+
+    const headers = [
+        "No Order",
+        "Tanggal Order",
+        "No PO",
+        "Kode Customer",
+        "Nama Customer",
+        "Jenis Order",
+        "Status",
+        "Total Qty",
+        "Total HPP",
+        "Total Jual",
+        "Tanggal Estimasi",
+    ];
+
+    const rows = paginatedOrders.value.map((order) => [
+        order.no_order,
+        order.tgl_order,
+        order.no_po,
+        order.kd_cus,
+        order.nm_cus,
+        order.nama_jenis,
+        order.nama_status,
+        order.total_qty,
+        order.total_hpp,
+        order.total_jual,
+        order.tgl_estimasi,
+    ]);
+
+    const csvContent = [
+        headers.map(escapeCsv).join(","),
+        ...rows.map((row) => row.map(escapeCsv).join(",")),
+    ].join("\n");
 
     const blob = new Blob([csvContent], {
         type: "text/csv;charset=utf-8;",
@@ -734,12 +728,9 @@ function triggerCsvExport() {
 
     const link = document.createElement("a");
 
-    link.setAttribute("href", url);
+    link.href = url;
 
-    link.setAttribute(
-        "download",
-        `Orderan_${startDate.value}_sd_${endDate.value}.csv`,
-    );
+    link.download = `Orderan_${startDate.value}_sd_${endDate.value}.csv`;
 
     document.body.appendChild(link);
 
@@ -749,11 +740,11 @@ function triggerCsvExport() {
 
     URL.revokeObjectURL(url);
 
-    toast.success("File CSV orderan berhasil diunduh!");
+    toast.success("File CSV berhasil diunduh.");
 }
 
 /* ============================================================
-   CHART BUCKET TYPE
+   CHART BUCKET
    ============================================================ */
 
 type ChartBucket = {
@@ -763,7 +754,7 @@ type ChartBucket = {
 };
 
 /* ============================================================
-   BUCKET PER HARI
+   DAILY BUCKET
    ============================================================ */
 
 function createDailyBuckets(start: Date, end: Date): ChartBucket[] {
@@ -787,12 +778,7 @@ function createDailyBuckets(start: Date, end: Date): ChartBucket[] {
 }
 
 /* ============================================================
-   BUCKET PER MINGGU
-   1-7
-   8-14
-   15-21
-   22-28
-   29-30/31
+   WEEKLY BUCKET
    ============================================================ */
 
 function createWeeklyBuckets(start: Date, end: Date): ChartBucket[] {
@@ -821,6 +807,7 @@ function createWeeklyBuckets(start: Date, end: Date): ChartBucket[] {
 
         buckets.push({
             start: startString,
+
             end: endString,
 
             label:
@@ -836,8 +823,7 @@ function createWeeklyBuckets(start: Date, end: Date): ChartBucket[] {
 }
 
 /* ============================================================
-   BUCKET PER BULAN
-   JAN - DES
+   MONTHLY BUCKET
    ============================================================ */
 
 function createMonthlyBuckets(start: Date, end: Date): ChartBucket[] {
@@ -872,7 +858,9 @@ function createMonthlyBuckets(start: Date, end: Date): ChartBucket[] {
 
         buckets.push({
             start: startString,
+
             end: endString,
+
             label: monthLabel,
         });
 
@@ -883,7 +871,7 @@ function createMonthlyBuckets(start: Date, end: Date): ChartBucket[] {
 }
 
 /* ============================================================
-   BUCKET CHART SESUAI FILTER
+   TREND BUCKET
    ============================================================ */
 
 const orderTrendBuckets = computed<ChartBucket[]>(() => {
@@ -893,48 +881,17 @@ const orderTrendBuckets = computed<ChartBucket[]>(() => {
 
     const totalDays = getDayDifference(start, end) + 1;
 
-    /* =========================
-           HARI
-           ========================= */
-
-    if (activePreset.value === "today") {
+    if (activePreset.value === "today" || activePreset.value === "this_week") {
         return createDailyBuckets(start, end);
     }
-
-    /* =========================
-           MINGGU
-           7 TANGGAL
-           ========================= */
-
-    if (activePreset.value === "this_week") {
-        return createDailyBuckets(start, end);
-    }
-
-    /* =========================
-           BULAN
-           1-7
-           8-14
-           15-21
-           22-28
-           29-30/31
-           ========================= */
 
     if (activePreset.value === "this_month") {
         return createWeeklyBuckets(start, end);
     }
 
-    /* =========================
-           TAHUN
-           JAN - DES
-           ========================= */
-
     if (activePreset.value === "this_year") {
         return createMonthlyBuckets(start, end);
     }
-
-    /* =========================
-           CUSTOM
-           ========================= */
 
     if (totalDays <= 31) {
         return createDailyBuckets(start, end);
@@ -948,7 +905,7 @@ const orderTrendBuckets = computed<ChartBucket[]>(() => {
 });
 
 /* ============================================================
-   TOTAL QUANTITY DALAM BUCKET
+   QUANTITY PER BUCKET
    ============================================================ */
 
 function getQuantityForBucket(bucketStart: string, bucketEnd: string): number {
@@ -964,25 +921,7 @@ function getQuantityForBucket(bucketStart: string, bucketEnd: string): number {
 }
 
 /* ============================================================
-   JENIS ORDER DINAMIS
-   ============================================================ */
-
-const orderTypeLabels = computed(() => {
-    const labels = new Set<string>();
-
-    for (const order of filteredOrdersByPeriod.value) {
-        const type = String(order.jenis_order ?? "").trim();
-
-        if (type) {
-            labels.add(type);
-        }
-    }
-
-    return Array.from(labels);
-});
-
-/* ============================================================
-   CHART TREN KUANTITAS
+   TREND CHART
    ============================================================ */
 
 const orderTrendChartData = computed(() => {
@@ -996,22 +935,27 @@ const orderTrendChartData = computed(() => {
                 label: "Kuantitas Orderan",
 
                 data: buckets.map((bucket) =>
-                    getQuantityForBucket(
-                        bucket.start,
-                        bucket.end,
-                    ),
+                    getQuantityForBucket(bucket.start, bucket.end),
                 ),
 
                 borderColor: "#2563eb",
+
                 backgroundColor: props.isDark
                     ? "rgba(37, 99, 235, 0.15)"
                     : "rgba(37, 99, 235, 0.08)",
+
                 borderWidth: 2.5,
+
                 fill: true,
+
                 tension: 0.3,
+
                 pointBackgroundColor: "#2563eb",
+
                 pointBorderColor: "#2563eb",
+
                 pointRadius: 3,
+
                 pointHoverRadius: 5,
             },
         ],
@@ -1019,7 +963,7 @@ const orderTrendChartData = computed(() => {
 });
 
 /* ============================================================
-   OPTION CHART KUANTITAS
+   TREND CHART OPTIONS
    ============================================================ */
 
 const quantityChartOptions = computed(() => ({
@@ -1090,9 +1034,7 @@ const quantityChartOptions = computed(() => ({
 
                 precision: 0,
 
-                callback: (value: any) => {
-                    return `${formatNumber(Number(value))} pcs`;
-                },
+                callback: (value: any) => `${formatNumber(Number(value))} pcs`,
 
                 font: {
                     size: 10,
@@ -1131,57 +1073,37 @@ const quantityChartOptions = computed(() => ({
 }));
 
 /* ============================================================
-   DISTRIBUSI JENIS ORDER
+   MODEL DISTRIBUTION
    ============================================================ */
 
-const orderTypeDistributionData = computed(() => {
-    const typeCounts: Record<string, number> = {};
+const orderModelDistributionData = computed(() => ({
+    labels: (props.distribusiModel ?? []).map((item) => item.nm_model),
 
-    for (const order of filteredOrdersByPeriod.value) {
-        const type = String(order.jenis_order ?? "").trim();
+    datasets: [
+        {
+            data: (props.distribusiModel ?? []).map((item) =>
+                Number(item.total_qty),
+            ),
 
-        if (!type) {
-            continue;
-        }
+            backgroundColor: [
+                "#2563eb",
+                "#10b981",
+                "#f59e0b",
+                "#8b5cf6",
+                "#ec4899",
+                "#06b6d4",
+                "#f97316",
+                "#14b8a6",
+                "#a855f7",
+                "#64748b",
+            ],
 
-        typeCounts[type] = (typeCounts[type] || 0) + 1;
-    }
+            borderWidth: 2,
 
-    const labels = orderTypeLabels.value;
-
-    const colors = [
-        "#2563eb",
-        "#10b981",
-        "#f59e0b",
-        "#8b5cf6",
-        "#ec4899",
-        "#64748b",
-        "#06b6d4",
-        "#f97316",
-        "#14b8a6",
-        "#a855f7",
-    ];
-
-    const data = labels.map((label) => typeCounts[label] || 0);
-
-    return {
-        labels,
-
-        datasets: [
-            {
-                data,
-
-                backgroundColor: labels.map(
-                    (_, index) => colors[index % colors.length],
-                ),
-
-                borderWidth: 2,
-
-                borderColor: props.isDark ? "#0f172a" : "#ffffff",
-            },
-        ],
-    };
-});
+            borderColor: props.isDark ? "#0f172a" : "#ffffff",
+        },
+    ],
+}));
 
 /* ============================================================
    DONUT OPTIONS
@@ -1214,10 +1136,19 @@ const donutChartOptions = computed(() => ({
 }));
 
 /* ============================================================
-   TOP CUSTOMERS
+   TOP CUSTOMER
    ============================================================ */
 
 const topCustomers = computed(() => {
+    /*
+     * Karena endpoint list menggunakan pagination,
+     * data customer yang tersedia di sini adalah customer
+     * dari halaman aktif.
+     *
+     * Untuk Top Customer seluruh periode, sebaiknya dibuat
+     * branch SP khusus seperti @bagian = 'customer'.
+     */
+
     const customerMap: Record<
         string,
         {
@@ -1228,10 +1159,12 @@ const topCustomers = computed(() => {
         }
     > = {};
 
-    for (const order of filteredOrdersByPeriod.value) {
-        if (!customerMap[order.kd_cus]) {
-            customerMap[order.kd_cus] = {
-                nm_cus: order.nm_cus,
+    for (const order of props.orderList ?? []) {
+        const key = order.kd_cus || order.nm_cus || "-";
+
+        if (!customerMap[key]) {
+            customerMap[key] = {
+                nm_cus: order.nm_cus || "-",
 
                 orderCount: 0,
 
@@ -1241,11 +1174,11 @@ const topCustomers = computed(() => {
             };
         }
 
-        customerMap[order.kd_cus].orderCount += 1;
+        customerMap[key].orderCount += 1;
 
-        customerMap[order.kd_cus].totalQty += Number(order.total_qty || 0);
+        customerMap[key].totalQty += Number(order.total_qty || 0);
 
-        customerMap[order.kd_cus].totalJual += Number(order.total_jual || 0);
+        customerMap[key].totalJual += Number(order.total_jual || 0);
     }
 
     return Object.values(customerMap)
@@ -1254,18 +1187,29 @@ const topCustomers = computed(() => {
 });
 
 /* ============================================================
-   DETAIL ORDER DRAWER
+   DETAIL ORDER
    ============================================================ */
 
 const isDetailOpen = ref(false);
 
-const selectedOrder = ref<OrderRecord | null>(null);
+const selectedOrder = ref<OrderListItem | null>(null);
 
-function openOrderDetail(order: OrderRecord) {
+function openOrderDetail(order: OrderListItem) {
     selectedOrder.value = order;
 
     isDetailOpen.value = true;
 }
+
+/* ============================================================
+   INITIAL DATA
+   ============================================================ */
+
+/*
+ * Dashboard pertama kali dibuka oleh Laravel.
+ *
+ * Tidak perlu fetch manual di sini karena props
+ * sudah diberikan oleh Inertia.
+ */
 </script>
 
 <template>
@@ -1280,13 +1224,13 @@ function openOrderDetail(order: OrderRecord) {
             <div
                 class="flex flex-col lg:flex-row lg:items-center justify-between gap-4"
             >
-                <!-- Quick Preset -->
+                <!-- PRESET -->
 
                 <div
                     class="flex flex-wrap items-center gap-1.5 bg-slate-100/80 dark:bg-slate-800/80 p-1.5 rounded-xl"
                 >
                     <button
-                        v-for="p in [
+                        v-for="preset in [
                             {
                                 key: 'today',
                                 label: 'Hari Ini',
@@ -1308,21 +1252,21 @@ function openOrderDetail(order: OrderRecord) {
                                 label: 'Rentang Khusus',
                             },
                         ]"
-                        :key="p.key"
+                        :key="preset.key"
                         type="button"
-                        @click="applyPreset(p.key as PeriodPreset)"
+                        @click="applyPreset(preset.key as PeriodPreset)"
                         class="px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer"
-                        :class="[
-                            activePreset === p.key
+                        :class="
+                            activePreset === preset.key
                                 ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
-                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white',
-                        ]"
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        "
                     >
-                        {{ p.label }}
+                        {{ preset.label }}
                     </button>
                 </div>
 
-                <!-- Navigation -->
+                <!-- NAVIGATION -->
 
                 <div class="flex flex-wrap items-center gap-2.5">
                     <button
@@ -1371,7 +1315,7 @@ function openOrderDetail(order: OrderRecord) {
                 </div>
             </div>
 
-            <!-- Custom Range -->
+            <!-- CUSTOM RANGE -->
 
             <div
                 v-if="activePreset === 'custom'"
@@ -1418,11 +1362,11 @@ function openOrderDetail(order: OrderRecord) {
         <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard
                 title="Total Orderan Masuk"
-                :value="Number(orderanData ?? 0)"
+                :value="Number(props.orderanData ?? 0)"
                 unit="Order"
                 type="number"
                 period-text="Berdasarkan tgl_order periode"
-                tooltip="Jumlah total lembar pesanan masuk pada periode yang dipilih."
+                tooltip="Jumlah total orderan masuk pada periode yang dipilih."
                 :icon="ShoppingBag"
                 icon-bg="bg-blue-50 dark:bg-blue-950/40"
                 icon-color="text-blue-600 dark:text-blue-400"
@@ -1430,7 +1374,7 @@ function openOrderDetail(order: OrderRecord) {
 
             <KpiCard
                 title="Total Kuantitas Pesanan"
-                :value="Number(totalKuantitas ?? 0)"
+                :value="Number(props.totalKuantitas ?? 0)"
                 unit="Pcs"
                 type="number"
                 period-text="Akumulasi total_qty pakaian"
@@ -1442,10 +1386,10 @@ function openOrderDetail(order: OrderRecord) {
 
             <KpiCard
                 title="Total HPP Produksi"
-                :value="Number(totalHpp ?? 0)"
+                :value="Number(props.totalHpp ?? 0)"
                 type="currency"
-                period-text="Akumulasi tot_hpp bahan & jahit"
-                tooltip="Total modal bahan baku kain dan upah tenaga kerja penjahit."
+                period-text="Akumulasi total_hpp"
+                tooltip="Total modal produksi berdasarkan HPP."
                 :icon="Layers"
                 icon-bg="bg-slate-100 dark:bg-slate-800"
                 icon-color="text-slate-600 dark:text-slate-300"
@@ -1453,10 +1397,10 @@ function openOrderDetail(order: OrderRecord) {
 
             <KpiCard
                 title="Total Nilai Penjualan"
-                :value="Number(totalJual ?? 0)"
+                :value="Number(props.totalJual ?? 0)"
                 type="currency"
-                period-text="Akumulasi total_jual pesanan"
-                tooltip="Total omzet kotor dari seluruh orderan terfilter."
+                period-text="Akumulasi total_jual"
+                tooltip="Total nilai penjualan dari seluruh orderan terfilter."
                 :icon="Banknote"
                 icon-bg="bg-blue-50 dark:bg-blue-950/40"
                 icon-color="text-blue-600 dark:text-blue-400"
@@ -1464,14 +1408,14 @@ function openOrderDetail(order: OrderRecord) {
         </section>
 
         <!-- =========================================================
-             GRAFIK
+             CHARTS
              ========================================================= -->
 
         <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5">
-            <!-- TREND KUANTITAS -->
+            <!-- TREND -->
 
             <div
-                class="md:col-span-2 lg:col-span-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-6 shadow-sm shadow-slate-200/40 dark:shadow-none flex flex-col justify-between"
+                class="md:col-span-2 lg:col-span-9 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-6 shadow-sm shadow-slate-200/40 dark:shadow-none"
             >
                 <div>
                     <div
@@ -1490,19 +1434,17 @@ function openOrderDetail(order: OrderRecord) {
                             </p>
                         </div>
 
-                        <!--
-                            BADGE TETAP MENGAMBIL DATA BACKEND.
-                            Tidak dihitung ulang dari chart.
-                        -->
                         <span
                             class="text-xs font-semibold text-blue-600 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 rounded-full"
                         >
-                            {{ formatNumber(Number(totalKuantitas ?? 0)) }}
+                            {{
+                                formatNumber(Number(props.totalKuantitas ?? 0))
+                            }}
                             Pcs
                         </span>
                     </div>
 
-                    <div class="h-[250px] w-full mt-4">
+                    <div class="h-[260px] w-full mt-4">
                         <Line
                             :data="orderTrendChartData"
                             :options="quantityChartOptions"
@@ -1511,10 +1453,10 @@ function openOrderDetail(order: OrderRecord) {
                 </div>
             </div>
 
-            <!-- DISTRIBUSI JENIS ORDER -->
+            <!-- DISTRIBUSI MODEL -->
 
             <div
-                class="md:col-span-1 lg:col-span-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-6 shadow-sm shadow-slate-200/40 dark:shadow-none flex flex-col justify-between"
+                class="md:col-span-1 lg:col-span-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-6 shadow-sm shadow-slate-200/40 dark:shadow-none"
             >
                 <div>
                     <div
@@ -1526,7 +1468,7 @@ function openOrderDetail(order: OrderRecord) {
                             Distribusi Model Order
                         </h3>
 
-                        <span class="text-xs text-slate-400"> Kategori </span>
+                        <span class="text-xs text-slate-400"> Model </span>
                     </div>
 
                     <div
@@ -1551,61 +1493,67 @@ function openOrderDetail(order: OrderRecord) {
                     </div>
                 </div>
             </div>
+        </section>
 
-            <!-- TOP CUSTOMER -->
+        <!-- =========================================================
+             TOP CUSTOMER
+             ========================================================= -->
 
+        <section
+            class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-6 shadow-sm shadow-slate-200/40 dark:shadow-none"
+        >
             <div
-                class="md:col-span-1 lg:col-span-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-6 shadow-sm shadow-slate-200/40 dark:shadow-none flex flex-col justify-between"
+                class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800"
             >
                 <div>
-                    <div
-                        class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800"
+                    <h3
+                        class="text-sm font-bold text-slate-900 dark:text-white"
                     >
-                        <h3
-                            class="text-sm font-bold text-slate-900 dark:text-white"
-                        >
-                            Pelanggan Terbanyak
-                        </h3>
+                        Pelanggan Terbanyak
+                    </h3>
 
-                        <Users class="h-4 w-4 text-slate-400" />
+                    <p class="text-xs text-slate-400 mt-0.5">
+                        Berdasarkan data order pada halaman aktif
+                    </p>
+                </div>
+
+                <Users class="h-4 w-4 text-slate-400" />
+            </div>
+
+            <div
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mt-4"
+            >
+                <div
+                    v-for="(customer, index) in topCustomers"
+                    :key="customer.nm_cus"
+                    class="p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50"
+                >
+                    <div
+                        class="text-xs font-bold text-slate-900 dark:text-white truncate"
+                    >
+                        {{ index + 1 }}.
+                        {{ customer.nm_cus }}
                     </div>
 
-                    <div class="mt-3 space-y-2.5">
-                        <div
-                            v-for="(c, idx) in topCustomers"
-                            :key="c.nm_cus"
-                            class="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-[#f8fafc] dark:bg-slate-900/50 flex items-center justify-between text-xs"
-                        >
-                            <div class="min-w-0 pr-2">
-                                <span
-                                    class="font-bold text-slate-900 dark:text-white truncate block"
-                                >
-                                    {{ idx + 1 }}.
-                                    {{ c.nm_cus }}
-                                </span>
-
-                                <span class="text-[11px] text-slate-400">
-                                    {{ c.orderCount }}
-                                    Order •
-                                    {{ formatNumber(c.totalQty) }}
-                                    pcs
-                                </span>
-                            </div>
-
-                            <span
-                                class="font-bold text-blue-600 dark:text-blue-400 shrink-0"
-                            >
-                                {{ formatRupiah(c.totalJual) }}
-                            </span>
-                        </div>
-
-                        <div
-                            v-if="topCustomers.length === 0"
-                            class="text-center py-8 text-xs text-slate-400"
-                        >
-                            Tidak ada data pelanggan pada periode ini.
-                        </div>
+                    <div class="text-[11px] text-slate-400 mt-1">
+                        {{ customer.orderCount }}
+                        Order ·
+                        {{ formatNumber(customer.totalQty) }}
+                        pcs
                     </div>
+
+                    <div
+                        class="text-xs font-bold text-blue-600 dark:text-blue-400 mt-2"
+                    >
+                        {{ formatRupiah(customer.totalJual) }}
+                    </div>
+                </div>
+
+                <div
+                    v-if="topCustomers.length === 0"
+                    class="lg:col-span-5 py-8 text-center text-xs text-slate-400"
+                >
+                    Tidak ada data pelanggan.
                 </div>
             </div>
         </section>
@@ -1617,7 +1565,7 @@ function openOrderDetail(order: OrderRecord) {
         <section
             class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-6 shadow-sm shadow-slate-200/40 dark:shadow-none space-y-4"
         >
-            <!-- Toolbar -->
+            <!-- TOOLBAR -->
 
             <div
                 class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800"
@@ -1638,7 +1586,7 @@ function openOrderDetail(order: OrderRecord) {
                 <div
                     class="grid grid-cols-1 sm:flex sm:flex-wrap sm:items-center gap-2.5 w-full lg:w-auto"
                 >
-                    <!-- Search -->
+                    <!-- SEARCH -->
 
                     <div class="relative w-full sm:w-64">
                         <Search
@@ -1653,7 +1601,7 @@ function openOrderDetail(order: OrderRecord) {
                         />
                     </div>
 
-                    <!-- Dropdown -->
+                    <!-- FILTER -->
 
                     <div class="grid grid-cols-2 sm:flex sm:items-center gap-2">
                         <select
@@ -1663,11 +1611,11 @@ function openOrderDetail(order: OrderRecord) {
                             <option value="ALL">Semua Status</option>
 
                             <option
-                                v-for="(v, k) in ORDER_STATUS_MAP"
-                                :key="k"
-                                :value="k"
+                                v-for="(value, key) in ORDER_STATUS_MAP"
+                                :key="key"
+                                :value="key"
                             >
-                                {{ v.label }}
+                                {{ value.label }}
                             </option>
                         </select>
 
@@ -1678,16 +1626,16 @@ function openOrderDetail(order: OrderRecord) {
                             <option value="ALL">Semua Jenis</option>
 
                             <option
-                                v-for="t in orderTypeLabels"
-                                :key="t"
-                                :value="t"
+                                v-for="type in orderTypeOptions"
+                                :key="type.value"
+                                :value="String(type.value)"
                             >
-                                {{ t }}
+                                {{ type.label }}
                             </option>
                         </select>
                     </div>
 
-                    <!-- Export -->
+                    <!-- EXPORT -->
 
                     <button
                         type="button"
@@ -1702,7 +1650,7 @@ function openOrderDetail(order: OrderRecord) {
             </div>
 
             <!-- =====================================================
-                 DESKTOP TABLE
+                 DESKTOP
                  ===================================================== -->
 
             <div class="hidden md:block overflow-x-auto">
@@ -1716,7 +1664,7 @@ function openOrderDetail(order: OrderRecord) {
                                 @click="toggleSort('tgl_order')"
                             >
                                 <div class="flex items-center gap-1">
-                                    <span>Tgl & No Order</span>
+                                    <span> Tgl & No Order </span>
 
                                     <ArrowUpDown class="h-3 w-3" />
                                 </div>
@@ -1739,7 +1687,7 @@ function openOrderDetail(order: OrderRecord) {
                                 <div
                                     class="flex items-center justify-center gap-1"
                                 >
-                                    <span>Kuantitas</span>
+                                    <span> Kuantitas </span>
 
                                     <ArrowUpDown class="h-3 w-3" />
                                 </div>
@@ -1754,7 +1702,7 @@ function openOrderDetail(order: OrderRecord) {
                                 <div
                                     class="flex items-center justify-end gap-1"
                                 >
-                                    <span>Penjualan</span>
+                                    <span> Penjualan </span>
 
                                     <ArrowUpDown class="h-3 w-3" />
                                 </div>
@@ -1767,7 +1715,7 @@ function openOrderDetail(order: OrderRecord) {
                                 <div
                                     class="flex items-center justify-center gap-1"
                                 >
-                                    <span>Estimasi Selesai</span>
+                                    <span> Estimasi Selesai </span>
 
                                     <ArrowUpDown class="h-3 w-3" />
                                 </div>
@@ -1781,59 +1729,64 @@ function openOrderDetail(order: OrderRecord) {
                         class="divide-y divide-slate-50 dark:divide-slate-800/60"
                     >
                         <tr
-                            v-for="ord in paginatedOrders"
-                            :key="ord.id_order"
+                            v-for="order in paginatedOrders"
+                            :key="order.id_order"
                             class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition cursor-pointer"
-                            @click="openOrderDetail(ord)"
+                            @click="openOrderDetail(order)"
                         >
                             <td class="py-3.5 pr-3">
                                 <span
                                     class="font-bold text-slate-900 dark:text-white block"
                                 >
-                                    {{ ord.no_order }}
+                                    {{ order.no_order }}
                                 </span>
 
                                 <span class="text-[11px] text-slate-400">
-                                    {{ formatDateIndo(ord.tgl_order) }}
+                                    {{ formatDateIndo(order.tgl_order) }}
                                 </span>
                             </td>
 
                             <td
                                 class="py-3.5 text-slate-600 dark:text-slate-300 font-mono text-[11px]"
                             >
-                                {{ ord.no_po || "-" }}
+                                {{ order.no_po || "-" }}
                             </td>
 
                             <td class="py-3.5 pr-3">
                                 <div
                                     class="font-semibold text-slate-900 dark:text-white"
                                 >
-                                    {{ ord.nm_cus }}
+                                    {{ order.nm_cus }}
                                 </div>
 
                                 <span class="text-[10px] text-slate-400">
-                                    {{ ord.kd_cus }}
+                                    {{ order.kd_cus }}
                                 </span>
                             </td>
 
                             <td
                                 class="py-3.5 text-slate-700 dark:text-slate-300"
                             >
-                                {{ ord.jenis_order }}
+                                {{
+                                    order.nama_jenis ||
+                                    `Jenis ${order.jenis_order}`
+                                }}
                             </td>
 
                             <td class="py-3.5 text-center">
                                 <span
                                     class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
                                     :class="
-                                        ORDER_STATUS_MAP[String(ord.status)]
+                                        ORDER_STATUS_MAP[String(order.status)]
                                             ?.badgeClass ||
                                         'bg-slate-100 text-slate-600'
                                     "
                                 >
                                     {{
-                                        ORDER_STATUS_MAP[String(ord.status)]
-                                            ?.label || "Status " + ord.status
+                                        order.nama_status ||
+                                        ORDER_STATUS_MAP[String(order.status)]
+                                            ?.label ||
+                                        `Status ${order.status}`
                                     }}
                                 </span>
                             </td>
@@ -1841,31 +1794,31 @@ function openOrderDetail(order: OrderRecord) {
                             <td
                                 class="py-3.5 text-center font-bold text-slate-900 dark:text-white"
                             >
-                                {{ formatNumber(ord.total_qty) }}
+                                {{ formatNumber(order.total_qty) }}
                                 pcs
                             </td>
 
                             <td
                                 class="py-3.5 text-right text-slate-500 dark:text-slate-400"
                             >
-                                {{ formatRupiah(ord.tot_hpp) }}
+                                {{ formatRupiah(order.total_hpp) }}
                             </td>
 
                             <td
                                 class="py-3.5 text-right font-bold text-blue-600 dark:text-blue-400"
                             >
-                                {{ formatRupiah(ord.total_jual) }}
+                                {{ formatRupiah(order.total_jual) }}
                             </td>
 
                             <td class="py-3.5 text-center">
                                 <span
                                     class="block font-medium text-slate-800 dark:text-slate-200"
                                 >
-                                    {{ formatDateIndo(ord.tgl_estimasi) }}
+                                    {{ formatDateIndo(order.tgl_estimasi) }}
                                 </span>
 
                                 <span
-                                    v-if="isOrderOverdue(ord, TODAY_DATE)"
+                                    v-if="isOrderOverdue(order, TODAY_DATE)"
                                     class="inline-block mt-0.5 text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 px-1.5 py-0.2 rounded"
                                 >
                                     Terlambat
@@ -1873,7 +1826,7 @@ function openOrderDetail(order: OrderRecord) {
 
                                 <span
                                     v-else-if="
-                                        isOrderApproaching(ord, TODAY_DATE)
+                                        isOrderApproaching(order, TODAY_DATE)
                                     "
                                     class="inline-block mt-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.2 rounded"
                                 >
@@ -1884,7 +1837,7 @@ function openOrderDetail(order: OrderRecord) {
                             <td class="py-3.5 text-right">
                                 <button
                                     type="button"
-                                    @click.stop="openOrderDetail(ord)"
+                                    @click.stop="openOrderDetail(order)"
                                     class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition cursor-pointer"
                                 >
                                     <Eye class="h-3.5 w-3.5" />
@@ -1913,12 +1866,12 @@ function openOrderDetail(order: OrderRecord) {
 
             <div class="block md:hidden space-y-3">
                 <div
-                    v-for="ord in paginatedOrders"
-                    :key="ord.id_order"
-                    @click="openOrderDetail(ord)"
+                    v-for="order in paginatedOrders"
+                    :key="order.id_order"
+                    @click="openOrderDetail(order)"
                     class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-blue-400 dark:hover:border-blue-500 transition active:scale-[0.99] cursor-pointer space-y-3"
                 >
-                    <!-- Header -->
+                    <!-- HEADER -->
 
                     <div class="flex items-start justify-between gap-2">
                         <div class="min-w-0">
@@ -1926,14 +1879,14 @@ function openOrderDetail(order: OrderRecord) {
                                 <span
                                     class="font-bold text-sm text-slate-900 dark:text-white tracking-tight"
                                 >
-                                    {{ ord.no_order }}
+                                    {{ order.no_order }}
                                 </span>
 
                                 <span
-                                    v-if="ord.no_po"
+                                    v-if="order.no_po"
                                     class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono font-medium"
                                 >
-                                    {{ ord.no_po }}
+                                    {{ order.no_po }}
                                 </span>
                             </div>
 
@@ -1944,7 +1897,7 @@ function openOrderDetail(order: OrderRecord) {
 
                                 <span>
                                     Order:
-                                    {{ formatDateIndo(ord.tgl_order) }}
+                                    {{ formatDateIndo(order.tgl_order) }}
                                 </span>
                             </div>
                         </div>
@@ -1952,19 +1905,20 @@ function openOrderDetail(order: OrderRecord) {
                         <span
                             class="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold"
                             :class="
-                                ORDER_STATUS_MAP[String(ord.status)]
+                                ORDER_STATUS_MAP[String(order.status)]
                                     ?.badgeClass ||
                                 'bg-slate-100 text-slate-600'
                             "
                         >
                             {{
-                                ORDER_STATUS_MAP[String(ord.status)]?.label ||
-                                "Status " + ord.status
+                                order.nama_status ||
+                                ORDER_STATUS_MAP[String(order.status)]?.label ||
+                                `Status ${order.status}`
                             }}
                         </span>
                     </div>
 
-                    <!-- Customer -->
+                    <!-- CUSTOMER -->
 
                     <div
                         class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 space-y-1.5"
@@ -1978,14 +1932,14 @@ function openOrderDetail(order: OrderRecord) {
                                 <span
                                     class="font-semibold text-slate-900 dark:text-white truncate"
                                 >
-                                    {{ ord.nm_cus }}
+                                    {{ order.nm_cus }}
                                 </span>
                             </div>
 
                             <span
                                 class="text-[10px] text-slate-400 font-mono shrink-0 ml-1"
                             >
-                                ({{ ord.kd_cus }})
+                                ({{ order.kd_cus }})
                             </span>
                         </div>
 
@@ -1997,12 +1951,15 @@ function openOrderDetail(order: OrderRecord) {
                             <span
                                 class="font-medium text-slate-800 dark:text-slate-200"
                             >
-                                {{ ord.jenis_order }}
+                                {{
+                                    order.nama_jenis ||
+                                    `Jenis ${order.jenis_order}`
+                                }}
                             </span>
                         </div>
                     </div>
 
-                    <!-- Matrix -->
+                    <!-- MATRIX -->
 
                     <div class="grid grid-cols-3 gap-2 pt-0.5 text-center">
                         <div
@@ -2017,7 +1974,7 @@ function openOrderDetail(order: OrderRecord) {
                             <span
                                 class="text-xs font-bold text-slate-900 dark:text-white mt-0.5 block"
                             >
-                                {{ formatNumber(ord.total_qty) }}
+                                {{ formatNumber(order.total_qty) }}
                                 pcs
                             </span>
                         </div>
@@ -2034,7 +1991,7 @@ function openOrderDetail(order: OrderRecord) {
                             <span
                                 class="text-xs font-bold text-blue-600 dark:text-blue-400 mt-0.5 block truncate"
                             >
-                                {{ formatRupiah(ord.total_jual) }}
+                                {{ formatRupiah(order.total_jual) }}
                             </span>
                         </div>
 
@@ -2050,12 +2007,17 @@ function openOrderDetail(order: OrderRecord) {
                             <span
                                 class="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 block truncate"
                             >
-                                {{ formatRupiah(ord.total_jual - ord.tot_hpp) }}
+                                {{
+                                    formatRupiah(
+                                        Number(order.total_jual) -
+                                            Number(order.total_hpp),
+                                    )
+                                }}
                             </span>
                         </div>
                     </div>
 
-                    <!-- Footer -->
+                    <!-- FOOTER -->
 
                     <div
                         class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs"
@@ -2073,19 +2035,21 @@ function openOrderDetail(order: OrderRecord) {
                                 <strong
                                     class="text-slate-700 dark:text-slate-200 font-semibold"
                                 >
-                                    {{ formatDateIndo(ord.tgl_estimasi) }}
+                                    {{ formatDateIndo(order.tgl_estimasi) }}
                                 </strong>
                             </span>
 
                             <span
-                                v-if="isOrderOverdue(ord, TODAY_DATE)"
+                                v-if="isOrderOverdue(order, TODAY_DATE)"
                                 class="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-1.5 py-0.5 rounded"
                             >
                                 Terlambat
                             </span>
 
                             <span
-                                v-else-if="isOrderApproaching(ord, TODAY_DATE)"
+                                v-else-if="
+                                    isOrderApproaching(order, TODAY_DATE)
+                                "
                                 class="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded"
                             >
                                 &lt; 3 Hari
@@ -2094,12 +2058,12 @@ function openOrderDetail(order: OrderRecord) {
 
                         <button
                             type="button"
-                            @click.stop="openOrderDetail(ord)"
+                            @click.stop="openOrderDetail(order)"
                             class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 transition cursor-pointer"
                         >
                             <Eye class="h-3.5 w-3.5" />
 
-                            <span>Detail</span>
+                            Detail
                         </button>
                     </div>
                 </div>
@@ -2126,25 +2090,21 @@ function openOrderDetail(order: OrderRecord) {
                     <span class="text-[11px] sm:text-xs">
                         Menampilkan
 
-                        {{
-                            tableOrders.length
-                                ? (currentPage - 1) * perPage + 1
-                                : 0
-                        }}
+                        {{ displayedFrom }}
 
                         -
 
-                        {{
-                            Math.min(currentPage * perPage, tableOrders.length)
-                        }}
+                        {{ displayedTo }}
 
                         dari
-                        {{ tableOrders.length }}
+
+                        {{ totalData }}
+
                         orderan
                     </span>
 
                     <select
-                        v-model="perPage"
+                        v-model.number="perPage"
                         class="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
                     >
                         <option :value="10">10 / hal</option>
@@ -2152,6 +2112,8 @@ function openOrderDetail(order: OrderRecord) {
                         <option :value="25">25 / hal</option>
 
                         <option :value="50">50 / hal</option>
+
+                        <option :value="100">100 / hal</option>
                     </select>
                 </div>
 
@@ -2160,7 +2122,7 @@ function openOrderDetail(order: OrderRecord) {
                 >
                     <button
                         type="button"
-                        @click="currentPage = Math.max(1, currentPage - 1)"
+                        @click="previousPage"
                         :disabled="currentPage === 1"
                         class="flex-1 sm:flex-initial px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 cursor-pointer text-center text-xs"
                     >
@@ -2176,10 +2138,8 @@ function openOrderDetail(order: OrderRecord) {
 
                     <button
                         type="button"
-                        @click="
-                            currentPage = Math.min(totalPages, currentPage + 1)
-                        "
-                        :disabled="currentPage === totalPages"
+                        @click="nextPage"
+                        :disabled="currentPage >= totalPages"
                         class="flex-1 sm:flex-initial px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 cursor-pointer text-center text-xs"
                     >
                         Berikutnya
@@ -2189,7 +2149,7 @@ function openOrderDetail(order: OrderRecord) {
         </section>
 
         <!-- =========================================================
-             DETAIL ORDER DRAWER
+             DETAIL DRAWER
              ========================================================= -->
 
         <Sheet :open="isDetailOpen" @update:open="isDetailOpen = $event">
@@ -2198,7 +2158,7 @@ function openOrderDetail(order: OrderRecord) {
                 class="w-full sm:max-w-lg p-0 overflow-y-auto"
             >
                 <div v-if="selectedOrder" class="p-6 space-y-6">
-                    <!-- Header -->
+                    <!-- HEADER -->
 
                     <SheetHeader
                         class="pb-3 border-b border-slate-100 dark:border-slate-800"
@@ -2215,13 +2175,16 @@ function openOrderDetail(order: OrderRecord) {
                                 :class="
                                     ORDER_STATUS_MAP[
                                         String(selectedOrder.status)
-                                    ]?.badgeClass
+                                    ]?.badgeClass ||
+                                    'bg-slate-100 text-slate-600'
                                 "
                             >
                                 {{
+                                    selectedOrder.nama_status ||
                                     ORDER_STATUS_MAP[
                                         String(selectedOrder.status)
-                                    ]?.label
+                                    ]?.label ||
+                                    `Status ${selectedOrder.status}`
                                 }}
                             </span>
                         </div>
@@ -2233,17 +2196,14 @@ function openOrderDetail(order: OrderRecord) {
                         </SheetTitle>
 
                         <SheetDescription class="text-xs text-slate-400">
-                            Dibuat oleh
-                            {{ selectedOrder.UserAdd }}
-                            pada
-                            {{ selectedOrder.DateAdd }}
+                            Informasi order berdasarkan data orderan.
                         </SheetDescription>
                     </SheetHeader>
 
-                    <!-- Informasi Order -->
+                    <!-- INFORMASI ORDER -->
 
                     <div
-                        class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-[#f8fafc] dark:bg-slate-900/60 space-y-2.5 text-xs"
+                        class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2.5 text-xs"
                     >
                         <h4
                             class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
@@ -2252,7 +2212,7 @@ function openOrderDetail(order: OrderRecord) {
                         </h4>
 
                         <div
-                            class="grid grid-cols-2 gap-2 text-slate-600 dark:text-slate-300"
+                            class="grid grid-cols-2 gap-3 text-slate-600 dark:text-slate-300"
                         >
                             <div>
                                 ID Order:
@@ -2263,10 +2223,10 @@ function openOrderDetail(order: OrderRecord) {
                             </div>
 
                             <div>
-                                ID Toko:
+                                No Order:
 
                                 <strong class="text-slate-900 dark:text-white">
-                                    TK-{{ selectedOrder.IdToko }}
+                                    {{ selectedOrder.no_order }}
                                 </strong>
                             </div>
 
@@ -2279,10 +2239,13 @@ function openOrderDetail(order: OrderRecord) {
                             </div>
 
                             <div>
-                                No Rutin:
+                                Jenis:
 
                                 <strong class="text-slate-900 dark:text-white">
-                                    {{ selectedOrder.no_rutin || "-" }}
+                                    {{
+                                        selectedOrder.nama_jenis ||
+                                        `Jenis ${selectedOrder.jenis_order}`
+                                    }}
                                 </strong>
                             </div>
 
@@ -2297,90 +2260,7 @@ function openOrderDetail(order: OrderRecord) {
                             </div>
 
                             <div>
-                                Jenis Order:
-
-                                <strong class="text-slate-900 dark:text-white">
-                                    {{ selectedOrder.jenis_order }}
-                                </strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Pelanggan -->
-
-                    <div
-                        class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-[#f8fafc] dark:bg-slate-900/60 space-y-2.5 text-xs"
-                    >
-                        <h4
-                            class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
-                        >
-                            2. Informasi Pelanggan
-                        </h4>
-
-                        <div
-                            class="space-y-1.5 text-slate-600 dark:text-slate-300"
-                        >
-                            <div>
-                                Kode Pelanggan:
-
-                                <strong class="text-slate-900 dark:text-white">
-                                    {{ selectedOrder.kd_cus }}
-                                </strong>
-                            </div>
-
-                            <div>
-                                Nama Pelanggan:
-
-                                <strong class="text-slate-900 dark:text-white">
-                                    {{ selectedOrder.nm_cus }}
-                                </strong>
-                            </div>
-
-                            <div>
-                                Nomor Telepon:
-
-                                <strong class="text-slate-900 dark:text-white">
-                                    {{ selectedOrder.tlp }}
-                                </strong>
-                            </div>
-
-                            <div>
-                                Alamat Pengiriman:
-
-                                <p
-                                    class="text-slate-800 dark:text-slate-200 mt-0.5 font-medium"
-                                >
-                                    {{ selectedOrder.alamat }}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Deadline -->
-
-                    <div
-                        class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-[#f8fafc] dark:bg-slate-900/60 space-y-2.5 text-xs"
-                    >
-                        <h4
-                            class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
-                        >
-                            3. Informasi Pengerjaan & Deadline
-                        </h4>
-
-                        <div
-                            class="grid grid-cols-2 gap-2 text-slate-600 dark:text-slate-300"
-                        >
-                            <div>
-                                Estimasi Kerja:
-
-                                <strong class="text-slate-900 dark:text-white">
-                                    {{ selectedOrder.jml_hari }}
-                                    Hari
-                                </strong>
-                            </div>
-
-                            <div>
-                                Tenggat Estimasi:
+                                Estimasi:
 
                                 <strong class="text-slate-900 dark:text-white">
                                     {{
@@ -2391,221 +2271,223 @@ function openOrderDetail(order: OrderRecord) {
                                 </strong>
                             </div>
                         </div>
-
-                        <div
-                            class="pt-2 border-t border-slate-200 dark:border-slate-700/80"
-                        >
-                            <span class="text-slate-500">
-                                Kondisi Deadline:
-                            </span>
-
-                            <span
-                                v-if="isOrderOverdue(selectedOrder, TODAY_DATE)"
-                                class="ml-2 font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded"
-                            >
-                                Terlambat Melewati Jadwal
-                            </span>
-
-                            <span
-                                v-else-if="
-                                    isOrderApproaching(
-                                        selectedOrder,
-                                        TODAY_DATE,
-                                    )
-                                "
-                                class="ml-2 font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded"
-                            >
-                                Kritis (&lt; 3 Hari Menjelang Kirim)
-                            </span>
-
-                            <span
-                                v-else-if="isOrderCompleted(selectedOrder)"
-                                class="ml-2 font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded"
-                            >
-                                Sudah Selesai Tepat Waktu
-                            </span>
-
-                            <span
-                                v-else
-                                class="ml-2 font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded"
-                            >
-                                Sesuai Jadwal (Aman)
-                            </span>
-                        </div>
                     </div>
 
-                    <!-- Keuangan -->
+                    <!-- CUSTOMER -->
 
                     <div
-                        class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-[#f8fafc] dark:bg-slate-900/60 space-y-2.5 text-xs"
+                        class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2.5 text-xs"
                     >
                         <h4
                             class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
                         >
-                            4. Informasi Keuangan & Laba
+                            2. Informasi Pelanggan
+                        </h4>
+
+                        <div
+                            class="space-y-2 text-slate-600 dark:text-slate-300"
+                        >
+                            <div class="flex justify-between gap-3">
+                                <span> Kode Pelanggan </span>
+
+                                <strong class="text-slate-900 dark:text-white">
+                                    {{ selectedOrder.kd_cus || "-" }}
+                                </strong>
+                            </div>
+
+                            <div class="flex justify-between gap-3">
+                                <span> Nama Pelanggan </span>
+
+                                <strong
+                                    class="text-slate-900 dark:text-white text-right"
+                                >
+                                    {{ selectedOrder.nm_cus || "-" }}
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STATUS -->
+
+                    <div
+                        class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2.5 text-xs"
+                    >
+                        <h4
+                            class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
+                        >
+                            3. Status Order
+                        </h4>
+
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-500"> Status: </span>
+
+                            <span
+                                class="px-2.5 py-1 rounded-full text-xs font-semibold"
+                                :class="
+                                    ORDER_STATUS_MAP[
+                                        String(selectedOrder.status)
+                                    ]?.badgeClass ||
+                                    'bg-slate-100 text-slate-600'
+                                "
+                            >
+                                {{
+                                    selectedOrder.nama_status ||
+                                    ORDER_STATUS_MAP[
+                                        String(selectedOrder.status)
+                                    ]?.label ||
+                                    `Status ${selectedOrder.status}`
+                                }}
+                            </span>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-500">
+                                Target selesai:
+                            </span>
+
+                            <strong class="text-slate-900 dark:text-white">
+                                {{ formatDateIndo(selectedOrder.tgl_estimasi) }}
+                            </strong>
+                        </div>
+                    </div>
+
+                    <!-- KEUANGAN -->
+
+                    <div
+                        class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-3 text-xs"
+                    >
+                        <h4
+                            class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
+                        >
+                            4. Informasi Keuangan
                         </h4>
 
                         <div class="space-y-2">
                             <div class="flex justify-between">
                                 <span class="text-slate-500">
-                                    Total Kuantitas:
+                                    Total Kuantitas
                                 </span>
 
-                                <span
-                                    class="font-bold text-slate-900 dark:text-white"
-                                >
+                                <strong class="text-slate-900 dark:text-white">
                                     {{ formatNumber(selectedOrder.total_qty) }}
                                     Pcs
-                                </span>
+                                </strong>
+                            </div>
+
+                            <div class="flex justify-between">
+                                <span class="text-slate-500"> Total HPP </span>
+
+                                <strong
+                                    class="text-slate-700 dark:text-slate-300"
+                                >
+                                    {{ formatRupiah(selectedOrder.total_hpp) }}
+                                </strong>
                             </div>
 
                             <div class="flex justify-between">
                                 <span class="text-slate-500">
-                                    Total Nilai Penjualan:
+                                    Total Penjualan
                                 </span>
 
-                                <span
-                                    class="font-bold text-blue-600 dark:text-blue-400"
+                                <strong
+                                    class="text-blue-600 dark:text-blue-400"
                                 >
                                     {{ formatRupiah(selectedOrder.total_jual) }}
-                                </span>
-                            </div>
-
-                            <div class="flex justify-between">
-                                <span class="text-slate-500">
-                                    Total HPP Produksi:
-                                </span>
-
-                                <span
-                                    class="font-medium text-slate-700 dark:text-slate-300"
-                                >
-                                    {{ formatRupiah(selectedOrder.tot_hpp) }}
-                                </span>
+                                </strong>
                             </div>
 
                             <div
-                                class="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-700 text-sm"
+                                class="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-700"
                             >
                                 <span
                                     class="font-bold text-slate-800 dark:text-slate-200"
                                 >
-                                    Estimasi Laba Kotor:
+                                    Estimasi Laba Kotor
                                 </span>
 
-                                <span
+                                <strong
                                     class="font-extrabold text-emerald-600 dark:text-emerald-400"
                                 >
                                     {{
                                         formatRupiah(
-                                            selectedOrder.total_jual -
-                                                selectedOrder.tot_hpp,
+                                            Number(selectedOrder.total_jual) -
+                                                Number(selectedOrder.total_hpp),
                                         )
                                     }}
-                                </span>
+                                </strong>
                             </div>
 
                             <div
                                 class="flex justify-between text-xs text-slate-500"
                             >
-                                <span>Margin Laba Kotor:</span>
+                                <span> Margin Laba Kotor </span>
 
-                                <span
-                                    class="font-bold text-emerald-600 dark:text-emerald-400"
+                                <strong
+                                    class="text-emerald-600 dark:text-emerald-400"
                                 >
                                     {{
-                                        selectedOrder.total_jual > 0
+                                        Number(selectedOrder.total_jual) > 0
                                             ? (
-                                                  ((selectedOrder.total_jual -
-                                                      selectedOrder.tot_hpp) /
-                                                      selectedOrder.total_jual) *
+                                                  ((Number(
+                                                      selectedOrder.total_jual,
+                                                  ) -
+                                                      Number(
+                                                          selectedOrder.total_hpp,
+                                                      )) /
+                                                      Number(
+                                                          selectedOrder.total_jual,
+                                                      )) *
                                                   100
                                               ).toFixed(1)
-                                            : 0
+                                            : "0.0"
                                     }}%
-                                </span>
+                                </strong>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Audit Trail -->
+                    <!-- DEADLINE -->
 
                     <div
-                        class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-[#f8fafc] dark:bg-slate-900/60 space-y-2 text-xs text-slate-500"
+                        class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-3 text-xs"
                     >
                         <h4
                             class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
                         >
-                            5. Informasi Audit Trail
+                            5. Deadline
                         </h4>
 
-                        <div class="grid grid-cols-2 gap-1.5 text-[11px]">
-                            <div>
-                                User Add:
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-500">
+                                Estimasi selesai
+                            </span>
 
-                                <strong
-                                    class="text-slate-700 dark:text-slate-300"
-                                >
-                                    {{ selectedOrder.UserAdd }}
-                                </strong>
-                            </div>
+                            <strong class="text-slate-900 dark:text-white">
+                                {{ formatDateIndo(selectedOrder.tgl_estimasi) }}
+                            </strong>
+                        </div>
 
-                            <div>
-                                Date Add:
+                        <div
+                            v-if="isOrderOverdue(selectedOrder, TODAY_DATE)"
+                            class="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-semibold"
+                        >
+                            Order sudah melewati tanggal estimasi.
+                        </div>
 
-                                <strong
-                                    class="text-slate-700 dark:text-slate-300"
-                                >
-                                    {{ selectedOrder.DateAdd }}
-                                </strong>
-                            </div>
+                        <div
+                            v-else-if="
+                                isOrderApproaching(selectedOrder, TODAY_DATE)
+                            "
+                            class="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 font-semibold"
+                        >
+                            Order mendekati tanggal estimasi.
+                        </div>
 
-                            <div>
-                                Date Edit:
-
-                                <strong
-                                    class="text-slate-700 dark:text-slate-300"
-                                >
-                                    {{ selectedOrder.DateEdit || "-" }}
-                                </strong>
-                            </div>
-
-                            <div>
-                                User Del:
-
-                                <strong
-                                    class="text-slate-700 dark:text-slate-300"
-                                >
-                                    {{ selectedOrder.UserDel || "-" }}
-                                </strong>
-                            </div>
-
-                            <div>
-                                Date Del:
-
-                                <strong
-                                    class="text-slate-700 dark:text-slate-300"
-                                >
-                                    {{ selectedOrder.DateDel || "-" }}
-                                </strong>
-                            </div>
-
-                            <div>
-                                Status Delete:
-
-                                <strong
-                                    :class="
-                                        selectedOrder.Delete
-                                            ? 'text-rose-600'
-                                            : 'text-slate-700 dark:text-slate-300'
-                                    "
-                                >
-                                    {{
-                                        selectedOrder.Delete
-                                            ? "Dihapus"
-                                            : "Aktif"
-                                    }}
-                                </strong>
-                            </div>
+                        <div
+                            v-else
+                            class="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-semibold"
+                        >
+                            Belum mendekati tanggal estimasi.
                         </div>
                     </div>
                 </div>

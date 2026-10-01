@@ -52,9 +52,34 @@ const props = defineProps<{
     }>;
 
     trendKuantitas?: Array<{
-    tanggal: string;
-    total_qty: number;
+        tanggal: string;
+        total_qty: number;
     }>;
+
+    orderList?: Array<{
+        nomor_baris: number;
+        id_order: number;
+        no_order: string;
+        tgl_order: string;
+        no_po: string;
+        kd_cus: string;
+        nm_cus: string;
+        jenis_order: number;
+        nama_jenis: string;
+        status: number;
+        nama_status: string;
+        total_qty: number;
+        total_hpp: number;
+        total_jual: number;
+        tgl_estimasi: string;
+    }>;
+
+    orderPagination?: {
+        total_data: number;
+        halaman: number;
+        per_halaman: number;
+        total_halaman: number;
+    };
 }>();
 
 // Theme tracking
@@ -207,6 +232,8 @@ function handleSaveNewOrder() {
                 :total-jual="props.totalJual"
                 :distribusi-model="props.distribusiModel"
                 :trend-kuantitas="props.trendKuantitas"
+                :order-list="props.orderList"
+                :order-pagination="props.orderPagination"
             />
 
             <!-- FINANCE -->
