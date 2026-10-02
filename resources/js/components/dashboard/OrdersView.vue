@@ -86,6 +86,13 @@ type OrderListItem = {
     tgl_estimasi: string;
 };
 
+type OrderDetailModel = {
+    id_order: number;
+    tgl_order: string;
+    nm_model: string;
+    qty: number;
+};
+
 type OrderPagination = {
     total_data: number;
     halaman: number;
@@ -116,6 +123,12 @@ const props = defineProps<{
     }>;
 
     orderList?: OrderListItem[];
+
+    orderDetailModels?: Array<{
+        id_order: number;
+        nm_model: string;
+        qty: number;
+    }>;
 
     orderPagination?: OrderPagination;
 }>();
@@ -1286,10 +1299,79 @@ const isDetailOpen = ref(false);
 
 const selectedOrder = ref<OrderListItem | null>(null);
 
+const selectedOrderModels = ref<OrderDetailModel[]>([]);
+
 function openOrderDetail(order: OrderListItem) {
     selectedOrder.value = order;
 
+    // Kosongkan detail sebelumnya agar model dari order sebelumnya
+    // tidak ikut tampil ketika order baru dibuka.
+    selectedOrderModels.value = [];
+
     isDetailOpen.value = true;
+
+    const filterMap: Record<PeriodPreset, string> = {
+        today: "day",
+        this_week: "week",
+        this_month: "month",
+        this_year: "year",
+        custom: "custom",
+    };
+
+    router.get(
+        "/dashboard",
+        {
+            filter: filterMap[activePreset.value],
+
+            tanggal_awal: startDate.value,
+
+            tanggal_akhir: endDate.value,
+
+            cari: tableSearch.value.trim() || null,
+
+            status: statusFilter.value === "ALL"
+                ? null
+                : statusFilter.value,
+
+            jenis_order: typeFilter.value === "ALL"
+                ? null
+                : typeFilter.value,
+
+            halaman: currentPage.value,
+
+            per_halaman: perPage.value,
+
+            urut_kolom: sortBy.value,
+
+            urut_arah: sortOrder.value.toUpperCase(),
+
+            id_order: order.id_order,
+        },
+        {
+            preserveState: true,
+
+            preserveScroll: true,
+
+            replace: true,
+
+            onSuccess: (page) => {
+                const pageProps = page.props as typeof page.props & {
+                    orderDetailModels?: OrderDetailModel[];
+                };
+
+                selectedOrderModels.value =
+                    pageProps.orderDetailModels ?? [];
+            },
+
+            onError: () => {
+                selectedOrderModels.value = [];
+
+                toast.error(
+                    "Gagal mengambil detail model order.",
+                );
+            },
+        },
+    );
 }
 
 /* ============================================================
@@ -2377,6 +2459,80 @@ function openOrderDetail(order: OrderListItem) {
                         </div>
                     </div>
 
+                    <!-- DETAIL PESANAN -->
+
+                    <div
+                        class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-3 text-xs"
+                    >
+                        <div class="flex items-center justify-between gap-3">
+                            <h4
+                                class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
+                            >
+                                3. Detail Pesanan
+                            </h4>
+
+                            <span
+                                v-if="selectedOrderModels.length > 0"
+                                class="text-[10px] font-semibold text-slate-400"
+                            >
+                                {{ selectedOrderModels.length }} Model
+                            </span>
+                        </div>
+
+                        <div
+                            v-if="selectedOrderModels.length > 0"
+                            class="divide-y divide-slate-200 dark:divide-slate-700"
+                        >
+                            <div
+                                v-for="(item, index) in selectedOrderModels"
+                                :key="`${selectedOrder?.id_order}-${item.nm_model}-${index}`"
+                                class="py-3 first:pt-0 last:pb-0"
+                            >
+                                <div
+                                    class="flex items-start justify-between gap-4"
+                                >
+                                    <div class="min-w-0">
+                                        <div
+                                            class="font-semibold text-slate-900 dark:text-white truncate"
+                                        >
+                                            {{
+                                                item.nm_model ||
+                                                "Tanpa Nama Model"
+                                            }}
+                                        </div>
+
+                                        <div
+                                            class="text-[10px] text-slate-400 mt-0.5"
+                                        >
+                                            Model {{ index + 1 }}
+                                        </div>
+                                    </div>
+
+                                    <div class="shrink-0 text-right">
+                                        <div
+                                            class="font-bold text-slate-900 dark:text-white"
+                                        >
+                                            {{ formatNumber(item.qty) }} Pcs
+                                        </div>
+
+                                        <div
+                                            class="text-[10px] text-slate-400 mt-0.5"
+                                        >
+                                            Kuantitas
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            v-else
+                            class="py-5 text-center text-xs text-slate-400"
+                        >
+                            Tidak ada detail model untuk order ini.
+                        </div>
+                    </div>
+
                     <!-- STATUS -->
 
                     <div
@@ -2385,7 +2541,7 @@ function openOrderDetail(order: OrderListItem) {
                         <h4
                             class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
                         >
-                            3. Status Order
+                            4. Status Order
                         </h4>
 
                         <div class="flex items-center justify-between">
@@ -2429,7 +2585,7 @@ function openOrderDetail(order: OrderListItem) {
                         <h4
                             class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
                         >
-                            4. Informasi Keuangan
+                            5. Informasi Keuangan
                         </h4>
 
                         <div class="space-y-2">
@@ -2524,7 +2680,7 @@ function openOrderDetail(order: OrderListItem) {
                         <h4
                             class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
                         >
-                            5. Deadline
+                            6. Deadline
                         </h4>
 
                         <div class="flex items-center justify-between">
@@ -2552,6 +2708,7 @@ function openOrderDetail(order: OrderListItem) {
                         >
                             Order mendekati tanggal estimasi.
                         </div>
+
                         <div
                             v-else
                             class="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-semibold"
