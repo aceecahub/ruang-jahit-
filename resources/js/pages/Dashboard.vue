@@ -175,7 +175,7 @@ function handleSaveNewOrder() {
                 </div>
 
                 <!-- Order Baru -->
-                <button
+                <!-- <button
                     type="button"
                     @click="isNewOrderModalOpen = true"
                     class="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-xs font-semibold shadow-xs transition active:scale-[0.98] cursor-pointer"
@@ -183,7 +183,7 @@ function handleSaveNewOrder() {
                     <Plus class="h-3.5 w-3.5" />
 
                     Order Baru
-                </button>
+                </button> -->
             </div>
         </header>
 
