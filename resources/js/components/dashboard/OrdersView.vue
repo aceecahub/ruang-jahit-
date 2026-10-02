@@ -51,7 +51,7 @@ import {
     Legend,
 } from "chart.js";
 
-import { Doughnut, Line } from "vue-chartjs";
+import { Bar, Doughnut, Line } from "vue-chartjs";
 
 ChartJS.register(
     CategoryScale,
@@ -1136,56 +1136,148 @@ const donutChartOptions = computed(() => ({
 }));
 
 /* ============================================================
-   TOP CUSTOMER
+   JENIS ORDER
    ============================================================ */
 
-const topCustomers = computed(() => {
-    /*
-     * Karena endpoint list menggunakan pagination,
-     * data customer yang tersedia di sini adalah customer
-     * dari halaman aktif.
-     *
-     * Untuk Top Customer seluruh periode, sebaiknya dibuat
-     * branch SP khusus seperti @bagian = 'customer'.
-     */
-
-    const customerMap: Record<
+const orderTypeChartData = computed(() => {
+    const orderMap = new Map<
         string,
         {
-            nm_cus: string;
-            orderCount: number;
-            totalQty: number;
-            totalJual: number;
+            nama_jenis: string;
+            total_order: number;
+            total_qty: number;
         }
-    > = {};
+    >();
 
     for (const order of props.orderList ?? []) {
-        const key = order.kd_cus || order.nm_cus || "-";
+        const key = String(order.jenis_order);
 
-        if (!customerMap[key]) {
-            customerMap[key] = {
-                nm_cus: order.nm_cus || "-",
-
-                orderCount: 0,
-
-                totalQty: 0,
-
-                totalJual: 0,
-            };
+        if (!orderMap.has(key)) {
+            orderMap.set(key, {
+                nama_jenis: order.nama_jenis || `Jenis ${key}`,
+                total_order: 0,
+                total_qty: 0,
+            });
         }
 
-        customerMap[key].orderCount += 1;
+        const current = orderMap.get(key)!;
 
-        customerMap[key].totalQty += Number(order.total_qty || 0);
-
-        customerMap[key].totalJual += Number(order.total_jual || 0);
+        current.total_order += 1;
+        current.total_qty += Number(order.total_qty || 0);
     }
 
-    return Object.values(customerMap)
-        .sort((a, b) => b.totalJual - a.totalJual)
-        .slice(0, 5);
+    const items = Array.from(orderMap.values());
+
+    return {
+        labels: items.map((item) => item.nama_jenis),
+
+        datasets: [
+            {
+                label: "Jumlah Order",
+
+                data: items.map((item) => item.total_order),
+
+                backgroundColor: [
+                    "#f59e0b", // amber
+                    "#8b5cf6", // violet
+                    "#ec4899", // pink
+                    "#f97316", // orange
+                    "#64748b", // slate
+                ],
+
+                borderRadius: 6,
+
+                borderSkipped: false,
+
+                maxBarThickness: 42,
+            },
+        ],
+    };
 });
 
+/* ============================================================
+   JENIS ORDER OPTIONS
+   ============================================================ */
+
+const orderTypeChartOptions = computed(() => ({
+    responsive: true,
+
+    maintainAspectRatio: false,
+
+    plugins: {
+        legend: {
+            display: false,
+        },
+
+        tooltip: {
+            backgroundColor: props.isDark ? "#0f172a" : "#ffffff",
+
+            titleColor: props.isDark ? "#f8fafc" : "#0f172a",
+
+            bodyColor: props.isDark ? "#cbd5e1" : "#475569",
+
+            borderColor: props.isDark ? "#334155" : "#e2e8f0",
+
+            borderWidth: 1,
+
+            callbacks: {
+                label: (ctx: any) => {
+                    return ` ${formatNumber(Number(ctx.parsed.y ?? 0))} order`;
+                },
+            },
+        },
+    },
+
+    scales: {
+        y: {
+            beginAtZero: true,
+
+            ticks: {
+                precision: 0,
+
+                color: props.isDark ? "#64748b" : "#94a3b8",
+
+                font: {
+                    size: 10,
+                },
+
+                callback: (value: any) => {
+                    return formatNumber(Number(value));
+                },
+            },
+
+            grid: {
+                color: props.isDark
+                    ? "rgba(51, 65, 85, 0.4)"
+                    : "rgba(241, 245, 249, 1)",
+            },
+
+            border: {
+                display: false,
+            },
+        },
+
+        x: {
+            ticks: {
+                color: props.isDark ? "#94a3b8" : "#64748b",
+
+                font: {
+                    size: 10,
+
+                    weight: "600",
+                },
+            },
+
+            grid: {
+                display: false,
+            },
+
+            border: {
+                display: false,
+            },
+        },
+    },
+}));
 /* ============================================================
    DETAIL ORDER
    ============================================================ */
@@ -1361,7 +1453,7 @@ function openOrderDetail(order: OrderListItem) {
 
         <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard
-                title="Total Orderan Masuk"
+                title="Job Order"
                 :value="Number(props.orderanData ?? 0)"
                 unit="Order"
                 type="number"
@@ -1373,7 +1465,7 @@ function openOrderDetail(order: OrderListItem) {
             />
 
             <KpiCard
-                title="Total Kuantitas Pesanan"
+                title="Kuantitas Order"
                 :value="Number(props.totalKuantitas ?? 0)"
                 unit="Pcs"
                 type="number"
@@ -1385,7 +1477,7 @@ function openOrderDetail(order: OrderListItem) {
             />
 
             <KpiCard
-                title="Total HPP Produksi"
+                title="Total HPP"
                 :value="Number(props.totalHpp ?? 0)"
                 type="currency"
                 period-text="Akumulasi total_hpp"
@@ -1396,7 +1488,7 @@ function openOrderDetail(order: OrderListItem) {
             />
 
             <KpiCard
-                title="Total Nilai Penjualan"
+                title="Total Penjualan"
                 :value="Number(props.totalJual ?? 0)"
                 type="currency"
                 period-text="Akumulasi total_jual"
@@ -1413,9 +1505,8 @@ function openOrderDetail(order: OrderListItem) {
 
         <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5">
             <!-- TREND -->
-
             <div
-                class="md:col-span-2 lg:col-span-9 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-6 shadow-sm shadow-slate-200/40 dark:shadow-none"
+                class="md:col-span-2 lg:col-span-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-6 shadow-sm shadow-slate-200/40 dark:shadow-none"
             >
                 <div>
                     <div
@@ -1453,8 +1544,51 @@ function openOrderDetail(order: OrderListItem) {
                 </div>
             </div>
 
-            <!-- DISTRIBUSI MODEL -->
+            <!-- JENIS ORDER -->
+            <div
+                class="md:col-span-1 lg:col-span-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-6 shadow-sm shadow-slate-200/40 dark:shadow-none"
+            >
+                <div>
+                    <div
+                        class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800"
+                    >
+                        <div>
+                            <h3
+                                class="text-sm font-bold text-slate-900 dark:text-white"
+                            >
+                                Jenis Order
+                            </h3>
 
+                            <p class="text-xs text-slate-400 mt-0.5">
+                                Maklon dan Supply
+                            </p>
+                        </div>
+                    </div>
+
+                    <div
+                        v-if="orderTypeChartData.labels?.length"
+                        class="w-full h-[230px] mt-4"
+                    >
+                        <Bar
+                            :data="orderTypeChartData"
+                            :options="orderTypeChartOptions"
+                        />
+                    </div>
+
+                    <div
+                        v-else
+                        class="w-full h-[230px] flex flex-col items-center justify-center text-slate-400"
+                    >
+                        <div class="text-sm font-semibold">Tidak ada data</div>
+
+                        <div class="text-xs mt-1">
+                            Belum ada order pada periode ini
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DISTRIBUSI MODEL -->
             <div
                 class="md:col-span-1 lg:col-span-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-6 shadow-sm shadow-slate-200/40 dark:shadow-none"
             >
@@ -1494,70 +1628,6 @@ function openOrderDetail(order: OrderListItem) {
                 </div>
             </div>
         </section>
-
-        <!-- =========================================================
-             TOP CUSTOMER
-             ========================================================= -->
-
-        <section
-            class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-6 shadow-sm shadow-slate-200/40 dark:shadow-none"
-        >
-            <div
-                class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800"
-            >
-                <div>
-                    <h3
-                        class="text-sm font-bold text-slate-900 dark:text-white"
-                    >
-                        Pelanggan Terbanyak
-                    </h3>
-
-                    <p class="text-xs text-slate-400 mt-0.5">
-                        Berdasarkan data order pada halaman aktif
-                    </p>
-                </div>
-
-                <Users class="h-4 w-4 text-slate-400" />
-            </div>
-
-            <div
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mt-4"
-            >
-                <div
-                    v-for="(customer, index) in topCustomers"
-                    :key="customer.nm_cus"
-                    class="p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50"
-                >
-                    <div
-                        class="text-xs font-bold text-slate-900 dark:text-white truncate"
-                    >
-                        {{ index + 1 }}.
-                        {{ customer.nm_cus }}
-                    </div>
-
-                    <div class="text-[11px] text-slate-400 mt-1">
-                        {{ customer.orderCount }}
-                        Order ·
-                        {{ formatNumber(customer.totalQty) }}
-                        pcs
-                    </div>
-
-                    <div
-                        class="text-xs font-bold text-blue-600 dark:text-blue-400 mt-2"
-                    >
-                        {{ formatRupiah(customer.totalJual) }}
-                    </div>
-                </div>
-
-                <div
-                    v-if="topCustomers.length === 0"
-                    class="lg:col-span-5 py-8 text-center text-xs text-slate-400"
-                >
-                    Tidak ada data pelanggan.
-                </div>
-            </div>
-        </section>
-
         <!-- =========================================================
              TABEL ORDERAN
              ========================================================= -->
@@ -2482,7 +2552,6 @@ function openOrderDetail(order: OrderListItem) {
                         >
                             Order mendekati tanggal estimasi.
                         </div>
-
                         <div
                             v-else
                             class="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-semibold"
