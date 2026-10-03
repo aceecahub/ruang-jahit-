@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { router } from "@inertiajs/vue3";
-// import { ref, computed, watch } from "vue";
-
 import { ref, computed, watch, nextTick } from "vue";
 
 import {
@@ -19,6 +17,8 @@ import {
     Users,
     ArrowUpDown,
     Clock,
+    Printer,
+    FileText,
     SlidersHorizontal,
     ChevronDown,
 } from "@lucide/vue";
@@ -921,6 +921,7 @@ function createWeeklyBuckets(start: Date, end: Date): ChartBucket[] {
 
 function createMonthlyBuckets(start: Date, end: Date): ChartBucket[] {
     const buckets: ChartBucket[] = [];
+    const isMultiYear = start.getFullYear() !== end.getFullYear();
 
     let current = new Date(start.getFullYear(), start.getMonth(), 1);
 
@@ -949,12 +950,16 @@ function createMonthlyBuckets(start: Date, end: Date): ChartBucket[] {
             month: "short",
         }).format(monthStart);
 
+        const label = isMultiYear
+            ? `${monthLabel} '${String(monthStart.getFullYear()).slice(-2)}`
+            : monthLabel;
+
         buckets.push({
             start: startString,
 
             end: endString,
 
-            label: monthLabel,
+            label: label,
         });
 
         current = new Date(current.getFullYear(), current.getMonth() + 1, 1);
@@ -986,15 +991,47 @@ const orderTrendBuckets = computed<ChartBucket[]>(() => {
         return createMonthlyBuckets(start, end);
     }
 
+    // Rentang Khusus (custom preset):
+    // <= 31 hari: per hari (daily)
+    // < 88 hari (kurang dari 3 bulan): per minggu (weekly)
+    // >= 88 hari (3 bulan atau lebih): per bulan (monthly) agar grafik tidak renyek & tidak terlalu padat
     if (totalDays <= 31) {
         return createDailyBuckets(start, end);
     }
 
-    if (totalDays <= 120) {
+    if (totalDays < 88) {
         return createWeeklyBuckets(start, end);
     }
 
     return createMonthlyBuckets(start, end);
+});
+
+const trendAggregationLabel = computed(() => {
+    const start = parseDate(startDate.value);
+    const end = parseDate(endDate.value);
+    const totalDays = getDayDifference(start, end) + 1;
+
+    if (activePreset.value === "today" || activePreset.value === "this_week") {
+        return "Per Hari";
+    }
+
+    if (activePreset.value === "this_month") {
+        return "Per Minggu";
+    }
+
+    if (activePreset.value === "this_year") {
+        return "Per Bulan";
+    }
+
+    if (totalDays <= 31) {
+        return "Per Hari";
+    }
+
+    if (totalDays < 88) {
+        return "Per Minggu";
+    }
+
+    return "Per Bulan";
 });
 
 /* ============================================================
@@ -1103,10 +1140,21 @@ const quantityChartOptions = computed(() => ({
             borderWidth: 1,
 
             callbacks: {
+                title: (items: any[]) => {
+                    if (!items || !items.length) return "";
+                    const idx = items[0].dataIndex;
+                    const bucket = orderTrendBuckets.value[idx];
+                    if (!bucket) return items[0].label;
+                    if (bucket.start === bucket.end) {
+                        return formatDateIndo(bucket.start);
+                    }
+                    return `${formatDateIndo(bucket.start)} – ${formatDateIndo(bucket.end)}`;
+                },
+
                 label: (ctx: any) => {
                     const value = Number(ctx.parsed.y ?? 0);
 
-                    return ` ${formatNumber(value)} pcs`;
+                    return ` Kuantitas: ${formatNumber(value)} pcs`;
                 },
             },
         },
@@ -1147,7 +1195,7 @@ const quantityChartOptions = computed(() => ({
             ticks: {
                 color: props.isDark ? "#94a3b8" : "#64748b",
 
-                maxRotation: 45,
+                maxRotation: orderTrendBuckets.value.length > 8 ? 45 : 0,
 
                 minRotation: 0,
 
@@ -1748,14 +1796,24 @@ function openOrderDetail(order: OrderListItem) {
                             </p>
                         </div>
 
-                        <span
-                            class="text-xs font-semibold text-blue-600 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 rounded-full"
-                        >
-                            {{
-                                formatNumber(Number(props.totalKuantitas ?? 0))
-                            }}
-                            Pcs
-                        </span>
+                        <div class="flex items-center gap-2">
+                            <span
+                                class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full"
+                            >
+                                {{ trendAggregationLabel }}
+                            </span>
+
+                            <span
+                                class="text-xs font-semibold text-blue-600 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 rounded-full"
+                            >
+                                {{
+                                    formatNumber(
+                                        Number(props.totalKuantitas ?? 0),
+                                    )
+                                }}
+                                Pcs
+                            </span>
+                        </div>
                     </div>
 
                     <div class="h-[260px] w-full mt-4">
