@@ -90,18 +90,6 @@ type OrderListItem = {
     tgl_estimasi: string;
 };
 
-<<<<<<< HEAD
-=======
-type OrderDetailModel = {
-    id_order: number;
-    tgl_order: string;
-    nm_model: string;
-    qty: number;
-    hpp: number;
-    harga_jual: number;
-};
-
->>>>>>> 77390b0 (filter resposif list data)
 type OrderPagination = {
     total_data: number;
     halaman: number;
@@ -133,11 +121,6 @@ const props = defineProps<{
 
     orderList?: OrderListItem[];
 
-<<<<<<< HEAD
-=======
-    orderDetailModels?: OrderDetailModel[];
-
->>>>>>> 77390b0 (filter resposif list data)
     orderPagination?: OrderPagination;
 }>();
 
@@ -1441,12 +1424,6 @@ const orderTypeChartOptions = computed(() => ({
    ============================================================ */
 
 const isDetailOpen = ref(false);
-<<<<<<< HEAD
-
-=======
-const isFakturModalOpen = ref(false);
-const mobileTableFilterOpen = ref(false);
->>>>>>> 77390b0 (filter resposif list data)
 const selectedOrder = ref<OrderListItem | null>(null);
 
 const selectedOrderModels = ref<OrderDetailModel[]>([]);
@@ -1459,65 +1436,6 @@ function openOrderDetail(order: OrderListItem) {
     selectedOrderModels.value = [];
 
     isDetailOpen.value = true;
-<<<<<<< HEAD
-=======
-
-    const filterMap: Record<PeriodPreset, string> = {
-        today: "day",
-        this_week: "week",
-        this_month: "month",
-        this_year: "year",
-        custom: "custom",
-    };
-
-    router.get(
-        "/dashboard",
-        {
-            filter: filterMap[activePreset.value],
-
-            tanggal_awal: startDate.value,
-
-            tanggal_akhir: endDate.value,
-
-            cari: tableSearch.value.trim() || null,
-
-            status: statusFilter.value === "ALL" ? null : statusFilter.value,
-
-            jenis_order: typeFilter.value === "ALL" ? null : typeFilter.value,
-
-            halaman: currentPage.value,
-
-            per_halaman: perPage.value,
-
-            urut_kolom: sortBy.value,
-
-            urut_arah: sortOrder.value.toUpperCase(),
-
-            id_order: order.id_order,
-        },
-        {
-            preserveState: true,
-
-            preserveScroll: true,
-
-            replace: true,
-
-            onSuccess: (page) => {
-                const pageProps = page.props as typeof page.props & {
-                    orderDetailModels?: OrderDetailModel[];
-                };
-
-                selectedOrderModels.value = pageProps.orderDetailModels ?? [];
-            },
-
-            onError: () => {
-                selectedOrderModels.value = [];
-
-                toast.error("Gagal mengambil detail model order.");
-            },
-        },
-    );
->>>>>>> 77390b0 (filter resposif list data)
 }
 
 /* ============================================================
@@ -1676,7 +1594,6 @@ function openOrderDetail(order: OrderListItem) {
         </section>
 
         <!-- Filter mobile. -->
-<<<<<<< HEAD
 <section
     class="min-w-0 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm shadow-slate-200/40 md:hidden dark:border-slate-800/80 dark:bg-slate-900 dark:shadow-none"
     aria-label="Filter periode order"
@@ -1805,145 +1722,6 @@ function openOrderDetail(order: OrderListItem) {
         </div>
     </div>
 </section>
-=======
-        <section
-            class="min-w-0 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm shadow-slate-200/40 md:hidden dark:border-slate-800/80 dark:bg-slate-900 dark:shadow-none"
-            aria-label="Filter periode order"
-        >
-            <div class="flex min-w-0 items-center justify-between gap-3">
-                <div class="min-w-0 flex-1" aria-live="polite">
-                    <p
-                        class="text-xs font-medium text-slate-500 dark:text-slate-400"
-                    >
-                        {{ mobilePeriodLabel }}
-                    </p>
-                    <p
-                        class="mt-1 text-xs font-semibold text-slate-800 dark:text-slate-100"
-                    >
-                        {{ formatDateIndo(startDate) }} –
-                        {{ formatDateIndo(endDate) }}
-                    </p>
-                </div>
-
-                <button
-                    type="button"
-                    @click="toggleMobileFilter"
-                    :aria-expanded="mobileFilterOpen"
-                    aria-controls="order-mobile-period-panel"
-                    class="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-blue-200/60 bg-blue-50/80 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50"
-                >
-                    <SlidersHorizontal class="h-3.5 w-3.5" aria-hidden="true" />
-                    Filter
-                    <ChevronDown
-                        class="h-3.5 w-3.5 transition-transform motion-reduce:transition-none"
-                        :class="{ 'rotate-180': mobileFilterOpen }"
-                        aria-hidden="true"
-                    />
-                </button>
-            </div>
-
-            <div
-                v-show="mobileFilterOpen"
-                id="order-mobile-period-panel"
-                class="mt-2 border-t border-slate-100 pt-2 dark:border-slate-800"
-            >
-                <div
-                    ref="mobilePresetList"
-                    role="group"
-                    aria-label="Pilihan periode"
-                    class="relative flex min-w-0 flex-nowrap gap-1.5 overflow-x-auto pb-1"
-                >
-                    <button
-                        v-for="preset in mobilePeriodPresets"
-                        :key="preset.key"
-                        type="button"
-                        @click="selectMobilePreset(preset.key)"
-                        :aria-pressed="mobileSelectedPreset === preset.key"
-                        class="min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded-lg border px-3 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
-                        :class="
-                            mobileSelectedPreset === preset.key
-                                ? 'border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500'
-                                : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
-                        "
-                    >
-                        {{ preset.label }}
-                    </button>
-                </div>
-
-                <div
-                    v-if="mobileSelectedPreset === 'custom'"
-                    class="mt-2 grid min-w-0 grid-cols-2 gap-2"
-                >
-                    <label
-                        class="min-w-0 text-xs font-medium text-slate-500 dark:text-slate-400"
-                    >
-                        Mulai
-                        <input
-                            type="date"
-                            v-model="customStartInput"
-                            class="mt-1 block h-11 w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-slate-50 px-1.5 text-base text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                        />
-                    </label>
-
-                    <label
-                        class="min-w-0 text-xs font-medium text-slate-500 dark:text-slate-400"
-                    >
-                        Sampai
-                        <input
-                            type="date"
-                            v-model="customEndInput"
-                            class="mt-1 block h-11 w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-slate-50 px-1.5 text-base text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                        />
-                    </label>
-                </div>
-
-                <div class="mt-1 flex items-center justify-between gap-2">
-                    <div
-                        v-if="mobileSelectedPreset !== 'custom'"
-                        class="flex items-center gap-1.5"
-                    >
-                        <button
-                            type="button"
-                            @click="navigatePeriod(-1)"
-                            :disabled="activePreset === 'custom'"
-                            aria-label="Periode sebelumnya"
-                            class="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                        >
-                            <ChevronLeft class="h-4 w-4" aria-hidden="true" />
-                        </button>
-
-                        <button
-                            type="button"
-                            @click="navigatePeriod(1)"
-                            :disabled="activePreset === 'custom'"
-                            aria-label="Periode berikutnya"
-                            class="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                        >
-                            <ChevronRight class="h-4 w-4" aria-hidden="true" />
-                        </button>
-                    </div>
-
-                    <button
-                        type="button"
-                        @click="resetMobilePeriod"
-                        class="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-1 text-xs font-semibold text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
-                    >
-                        <RotateCcw class="h-3.5 w-3.5" aria-hidden="true" />
-                        Reset
-                    </button>
-
-                    <button
-                        v-if="mobileSelectedPreset === 'custom'"
-                        type="button"
-                        @click="applyMobileCustomRange"
-                        class="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white transition hover:bg-blue-700"
-                    >
-                        Terapkan
-                    </button>
-                </div>
-            </div>
-        </section>
->>>>>>> 77390b0 (filter resposif list data)
 
         <!-- =========================================================
              KPI
@@ -2791,9 +2569,6 @@ function openOrderDetail(order: OrderListItem) {
                     <!-- INFORMASI ORDER -->
 
                     <div
-<<<<<<< HEAD
-                        class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2.5 text-xs"
-=======
                         class="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 overflow-hidden"
                     >
                         <div class="grid grid-cols-2">
@@ -3175,16 +2950,11 @@ function openOrderDetail(order: OrderListItem) {
                     <!-- ====================================================== -->
                     <div
                         class="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 p-4"
->>>>>>> 77390b0 (filter resposif list data)
                     >
                         <h4
                             class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
                         >
-<<<<<<< HEAD
                             1. Informasi Order
-=======
-                            Total
->>>>>>> 77390b0 (filter resposif list data)
                         </h4>
 
                         <div
@@ -3306,43 +3076,6 @@ function openOrderDetail(order: OrderListItem) {
                                     'bg-slate-100 text-slate-600'
                                 "
                             >
-<<<<<<< HEAD
-                                {{
-                                    selectedOrder.nama_status ||
-                                    ORDER_STATUS_MAP[
-                                        String(selectedOrder.status)
-                                    ]?.label ||
-                                    `Status ${selectedOrder.status}`
-                                }}
-                       const isDetailOpen = ref(false);     </span>
-                        </div>
-
-                        <div class="flex items-center justify-between">
-                            <span class="text-slate-500">
-                                Target selesai:
-                            </span>
-
-                            <strong class="text-slate-900 dark:text-white">
-                                {{ formatDateIndo(selectedOrder.tgl_estimasi) }}
-                            </strong>
-                        </div>
-                    </div>
-
-                    <!-- KEUANGAN -->
-
-                    <div
-                        class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-3 text-xs"
-                    >
-                        <h4
-                            class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
-                        >
-                            4. Informasi Keuangan
-                        </h4>
-
-                        <div class="space-y-2">
-                            <div class="flex justify-between">
-=======
->>>>>>> 77390b0 (filter resposif list data)
                                 <span class="text-slate-500">
                                     Total Kuantitas
                                 </span>
@@ -3424,53 +3157,6 @@ function openOrderDetail(order: OrderListItem) {
                             </div>
                         </div>
                     </div>
-<<<<<<< HEAD
-
-                    <!-- DEADLINE -->
-
-                    <div
-                        class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-3 text-xs"
-                    >
-                        <h4
-                            class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
-                        >
-                            5. Deadline
-                        </h4>
-
-                        <div class="flex items-center justify-between">
-                            <span class="text-slate-500">
-                                Estimasi selesai
-                            </span>
-
-                            <strong class="text-slate-900 dark:text-white">
-                                {{ formatDateIndo(selectedOrder.tgl_estimasi) }}
-                            </strong>
-                        </div>
-
-                        <div
-                            v-if="isOrderOverdue(selectedOrder, TODAY_DATE)"
-                            class="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-semibold"
-                        >
-                            Order sudah melewati tanggal estimasi.
-                        </div>
-
-                        <div
-                            v-else-if="
-                                isOrderApproaching(selectedOrder, TODAY_DATE)
-                            "
-                            class="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 font-semibold"
-                        >
-                            Order mendekati tanggal estimasi.
-                        </div>
-                        <div
-                       const isDetailOpen = ref(false);     v-else
-                            class="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-semibold"
-                        >
-                            Belum mendekati tanggal estimasi.
-                        </div>
-                    </div>
-=======
->>>>>>> 77390b0 (filter resposif list data)
                 </div>
             </SheetContent>
         </Sheet>
