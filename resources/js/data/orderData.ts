@@ -110,6 +110,7 @@ export type OrderLike = {
 };
 
 // Helper Functions
+<<<<<<< HEAD
 export function isOrderActive(order: OrderLike): boolean {
     return [0, 1, 2, 3].includes(Number(order.status));
 }
@@ -129,6 +130,28 @@ export function isOrderOverdue(order: OrderLike, referenceDate = TODAY_DATE): bo
 
 export function isOrderApproaching(order: OrderLike, referenceDate = TODAY_DATE): boolean {
     if (isOrderCompleted(order) || isOrderCancelled(order) || !order.tgl_estimasi || isOrderOverdue(order, referenceDate)) return false;
+=======
+export function isOrderActive(order: { status: number | string }): boolean {
+    return [0, 1, 2, 3].includes(Number(order.status));
+}
+
+export function isOrderCompleted(order: { status: number | string }): boolean {
+    return Number(order.status) === 4;
+}
+
+export function isOrderCancelled(order: { status: number | string; Delete?: boolean }): boolean {
+    return Number(order.status) === 5 || order.Delete === true;
+}
+
+export function isOrderOverdue(order: { status: number | string; tgl_estimasi?: string; Delete?: boolean }, referenceDate = TODAY_DATE): boolean {
+    if (isOrderCompleted(order) || isOrderCancelled(order)) return false;
+    return Boolean(order.tgl_estimasi && order.tgl_estimasi < referenceDate);
+}
+
+export function isOrderApproaching(order: { status: number | string; tgl_estimasi?: string; Delete?: boolean }, referenceDate = TODAY_DATE): boolean {
+    if (isOrderCompleted(order) || isOrderCancelled(order) || isOrderOverdue(order, referenceDate)) return false;
+    if (!order.tgl_estimasi) return false;
+>>>>>>> ad2bd68 (update frontend detal and data accurate and add print)
     const diffDays = Math.ceil((new Date(order.tgl_estimasi).getTime() - new Date(referenceDate).getTime()) / (1000 * 3600 * 24));
     return diffDays >= 0 && diffDays <= 3;
 }
