@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router } from "@inertiajs/vue3";
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 
 import {
     Calendar,
@@ -19,6 +19,8 @@ import {
     Clock,
     Printer,
     FileText,
+    SlidersHorizontal,
+    ChevronDown,
 } from "@lucide/vue";
 
 import KpiCard from "./KpiCard.vue";
@@ -231,6 +233,95 @@ const customStartInput = ref<string>(`${defaultYear}-${defaultMonth}-01`);
 const customEndInput = ref<string>(TODAY_DATE);
 
 const periodOffset = ref(0);
+
+/* Tampilan filter mobile. */
+const mobileFilterOpen = ref(false);
+const mobileCustomSelected = ref(false);
+const mobilePresetList = ref<HTMLDivElement | null>(null);
+
+const mobilePeriodPresets: { key: PeriodPreset; label: string }[] = [
+    { key: "today", label: "Hari Ini" },
+    { key: "this_week", label: "Minggu Ini" },
+    { key: "this_month", label: "Bulan Ini" },
+    { key: "this_year", label: "Tahun Ini" },
+    { key: "custom", label: "Rentang Khusus" },
+];
+
+const mobileSelectedPreset = computed<PeriodPreset>(() =>
+    mobileCustomSelected.value ? "custom" : activePreset.value,
+);
+
+const mobilePeriodLabel = computed(() => {
+    const labels: Record<PeriodPreset, string> = {
+        today: "Hari Ini",
+        this_week: "Minggu Ini",
+        this_month: "Bulan Ini",
+        this_year: "Tahun Ini",
+        custom: "Rentang Khusus",
+    };
+
+    return labels[activePreset.value];
+});
+
+async function revealMobilePreset() {
+    await nextTick();
+
+    const list = mobilePresetList.value;
+    const selected = list?.querySelector<HTMLButtonElement>(
+        '[aria-pressed="true"]',
+    );
+
+    if (!list || !selected) return;
+
+    const left = selected.offsetLeft;
+    const right = left + selected.offsetWidth;
+
+    if (left < list.scrollLeft) {
+        list.scrollLeft = left;
+    } else if (right > list.scrollLeft + list.clientWidth) {
+        list.scrollLeft = right - list.clientWidth;
+    }
+}
+
+function toggleMobileFilter() {
+    mobileFilterOpen.value = !mobileFilterOpen.value;
+
+    if (mobileFilterOpen.value) {
+        void revealMobilePreset();
+    }
+}
+
+function selectMobilePreset(preset: PeriodPreset) {
+    mobileCustomSelected.value = preset === "custom";
+
+    if (preset !== "custom") {
+        applyPreset(preset);
+    }
+
+    void revealMobilePreset();
+}
+
+function applyMobileCustomRange() {
+    const valid = Boolean(
+        customStartInput.value &&
+        customEndInput.value &&
+        customStartInput.value <= customEndInput.value,
+    );
+
+    applyCustomRange();
+
+    if (valid) {
+        mobileCustomSelected.value = false;
+        mobileFilterOpen.value = false;
+    }
+}
+
+function resetMobilePeriod() {
+    mobileCustomSelected.value = false;
+
+    resetPeriod();
+    void revealMobilePreset();
+}
 
 /* ============================================================
    TABLE FILTER STATE
@@ -842,6 +933,7 @@ function createWeeklyBuckets(start: Date, end: Date): ChartBucket[] {
 
 function createMonthlyBuckets(start: Date, end: Date): ChartBucket[] {
     const buckets: ChartBucket[] = [];
+    const isMultiYear = start.getFullYear() !== end.getFullYear();
 
     let current = new Date(start.getFullYear(), start.getMonth(), 1);
 
@@ -870,12 +962,16 @@ function createMonthlyBuckets(start: Date, end: Date): ChartBucket[] {
             month: "short",
         }).format(monthStart);
 
+        const label = isMultiYear
+            ? `${monthLabel} '${String(monthStart.getFullYear()).slice(-2)}`
+            : monthLabel;
+
         buckets.push({
             start: startString,
 
             end: endString,
 
-            label: monthLabel,
+            label: label,
         });
 
         current = new Date(current.getFullYear(), current.getMonth() + 1, 1);
@@ -907,15 +1003,47 @@ const orderTrendBuckets = computed<ChartBucket[]>(() => {
         return createMonthlyBuckets(start, end);
     }
 
+    // Rentang Khusus (custom preset):
+    // <= 31 hari: per hari (daily)
+    // < 88 hari (kurang dari 3 bulan): per minggu (weekly)
+    // >= 88 hari (3 bulan atau lebih): per bulan (monthly) agar grafik tidak renyek & tidak terlalu padat
     if (totalDays <= 31) {
         return createDailyBuckets(start, end);
     }
 
-    if (totalDays <= 120) {
+    if (totalDays < 88) {
         return createWeeklyBuckets(start, end);
     }
 
     return createMonthlyBuckets(start, end);
+});
+
+const trendAggregationLabel = computed(() => {
+    const start = parseDate(startDate.value);
+    const end = parseDate(endDate.value);
+    const totalDays = getDayDifference(start, end) + 1;
+
+    if (activePreset.value === "today" || activePreset.value === "this_week") {
+        return "Per Hari";
+    }
+
+    if (activePreset.value === "this_month") {
+        return "Per Minggu";
+    }
+
+    if (activePreset.value === "this_year") {
+        return "Per Bulan";
+    }
+
+    if (totalDays <= 31) {
+        return "Per Hari";
+    }
+
+    if (totalDays < 88) {
+        return "Per Minggu";
+    }
+
+    return "Per Bulan";
 });
 
 /* ============================================================
@@ -1024,10 +1152,21 @@ const quantityChartOptions = computed(() => ({
             borderWidth: 1,
 
             callbacks: {
+                title: (items: any[]) => {
+                    if (!items || !items.length) return "";
+                    const idx = items[0].dataIndex;
+                    const bucket = orderTrendBuckets.value[idx];
+                    if (!bucket) return items[0].label;
+                    if (bucket.start === bucket.end) {
+                        return formatDateIndo(bucket.start);
+                    }
+                    return `${formatDateIndo(bucket.start)} – ${formatDateIndo(bucket.end)}`;
+                },
+
                 label: (ctx: any) => {
                     const value = Number(ctx.parsed.y ?? 0);
 
-                    return ` ${formatNumber(value)} pcs`;
+                    return ` Kuantitas: ${formatNumber(value)} pcs`;
                 },
             },
         },
@@ -1068,7 +1207,7 @@ const quantityChartOptions = computed(() => ({
             ticks: {
                 color: props.isDark ? "#94a3b8" : "#64748b",
 
-                maxRotation: 45,
+                maxRotation: orderTrendBuckets.value.length > 8 ? 45 : 0,
 
                 minRotation: 0,
 
@@ -1450,7 +1589,7 @@ const selectedOrderTotal = computed(() => {
              ========================================================= -->
 
         <section
-            class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-5 shadow-sm shadow-slate-200/40 dark:shadow-none space-y-4"
+            class="hidden md:block rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-5 shadow-sm shadow-slate-200/40 dark:shadow-none space-y-4"
         >
             <div
                 class="flex flex-col lg:flex-row lg:items-center justify-between gap-4"
@@ -1586,11 +1725,150 @@ const selectedOrderTotal = computed(() => {
             </div>
         </section>
 
+        <!-- Filter mobile. -->
+        <section
+            class="min-w-0 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm shadow-slate-200/40 md:hidden dark:border-slate-800/80 dark:bg-slate-900 dark:shadow-none"
+            aria-label="Filter periode order"
+        >
+            <div class="flex min-w-0 items-center justify-between gap-3">
+                <div class="min-w-0 flex-1" aria-live="polite">
+                    <p
+                        class="text-xs font-medium text-slate-500 dark:text-slate-400"
+                    >
+                        {{ mobilePeriodLabel }}
+                    </p>
+                    <p
+                        class="mt-1 text-xs font-semibold text-slate-800 dark:text-slate-100"
+                    >
+                        {{ formatDateIndo(startDate) }} –
+                        {{ formatDateIndo(endDate) }}
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    @click="toggleMobileFilter"
+                    :aria-expanded="mobileFilterOpen"
+                    aria-controls="order-mobile-period-panel"
+                    class="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-blue-200/60 bg-blue-50/80 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50"
+                >
+                    <SlidersHorizontal class="h-3.5 w-3.5" aria-hidden="true" />
+                    Filter
+                    <ChevronDown
+                        class="h-3.5 w-3.5 transition-transform motion-reduce:transition-none"
+                        :class="{ 'rotate-180': mobileFilterOpen }"
+                        aria-hidden="true"
+                    />
+                </button>
+            </div>
+
+            <div
+                v-show="mobileFilterOpen"
+                id="order-mobile-period-panel"
+                class="mt-2 border-t border-slate-100 pt-2 dark:border-slate-800"
+            >
+                <div
+                    ref="mobilePresetList"
+                    role="group"
+                    aria-label="Pilihan periode"
+                    class="relative flex min-w-0 flex-nowrap gap-1.5 overflow-x-auto pb-1"
+                >
+                    <button
+                        v-for="preset in mobilePeriodPresets"
+                        :key="preset.key"
+                        type="button"
+                        @click="selectMobilePreset(preset.key)"
+                        :aria-pressed="mobileSelectedPreset === preset.key"
+                        class="min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded-lg border px-3 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+                        :class="
+                            mobileSelectedPreset === preset.key
+                                ? 'border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500'
+                                : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                        "
+                    >
+                        {{ preset.label }}
+                    </button>
+                </div>
+
+                <div
+                    v-if="mobileSelectedPreset === 'custom'"
+                    class="mt-2 grid min-w-0 grid-cols-2 gap-2"
+                >
+                    <label
+                        class="min-w-0 text-xs font-medium text-slate-500 dark:text-slate-400"
+                    >
+                        Mulai
+                        <input
+                            type="date"
+                            v-model="customStartInput"
+                            class="mt-1 block h-11 w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-slate-50 px-1.5 text-base text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                        />
+                    </label>
+
+                    <label
+                        class="min-w-0 text-xs font-medium text-slate-500 dark:text-slate-400"
+                    >
+                        Sampai
+                        <input
+                            type="date"
+                            v-model="customEndInput"
+                            class="mt-1 block h-11 w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-slate-50 px-1.5 text-base text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                        />
+                    </label>
+                </div>
+
+                <div class="mt-1 flex items-center justify-between gap-2">
+                    <div
+                        v-if="mobileSelectedPreset !== 'custom'"
+                        class="flex items-center gap-1.5"
+                    >
+                        <button
+                            type="button"
+                            @click="navigatePeriod(-1)"
+                            :disabled="activePreset === 'custom'"
+                            aria-label="Periode sebelumnya"
+                            class="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                        >
+                            <ChevronLeft class="h-4 w-4" aria-hidden="true" />
+                        </button>
+
+                        <button
+                            type="button"
+                            @click="navigatePeriod(1)"
+                            :disabled="activePreset === 'custom'"
+                            aria-label="Periode berikutnya"
+                            class="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                        >
+                            <ChevronRight class="h-4 w-4" aria-hidden="true" />
+                        </button>
+                    </div>
+
+                    <button
+                        type="button"
+                        @click="resetMobilePeriod"
+                        class="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-1 text-xs font-semibold text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
+                    >
+                        <RotateCcw class="h-3.5 w-3.5" aria-hidden="true" />
+                        Reset
+                    </button>
+
+                    <button
+                        v-if="mobileSelectedPreset === 'custom'"
+                        type="button"
+                        @click="applyMobileCustomRange"
+                        class="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white transition hover:bg-blue-700"
+                    >
+                        Terapkan
+                    </button>
+                </div>
+            </div>
+        </section>
+
         <!-- =========================================================
              KPI
              ========================================================= -->
 
-        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <KpiCard
                 title="Job Order"
                 :value="Number(props.orderanData ?? 0)"
@@ -1664,14 +1942,24 @@ const selectedOrderTotal = computed(() => {
                             </p>
                         </div>
 
-                        <span
-                            class="text-xs font-semibold text-blue-600 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 rounded-full"
-                        >
-                            {{
-                                formatNumber(Number(props.totalKuantitas ?? 0))
-                            }}
-                            Pcs
-                        </span>
+                        <div class="flex items-center gap-2">
+                            <span
+                                class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full"
+                            >
+                                {{ trendAggregationLabel }}
+                            </span>
+
+                            <span
+                                class="text-xs font-semibold text-blue-600 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 rounded-full"
+                            >
+                                {{
+                                    formatNumber(
+                                        Number(props.totalKuantitas ?? 0),
+                                    )
+                                }}
+                                Pcs
+                            </span>
+                        </div>
                     </div>
 
                     <div class="h-[260px] w-full mt-4">
@@ -2044,13 +2332,15 @@ const selectedOrderTotal = computed(() => {
                             </td>
 
                             <td class="py-3.5 text-right" @click.stop>
-                                <div class="inline-flex items-center gap-1.5 justify-end">
+                                <div
+                                    class="inline-flex items-center gap-1.5 justify-end"
+                                >
                                     <button
                                         type="button"
                                         @click.stop="openOrderDetail(order)"
                                         title="Lihat Detail Order"
                                         class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/60 dark:text-blue-400 transition cursor-pointer"
-                                    >   
+                                    >
                                         <Eye class="h-3.5 w-3.5" />
                                     </button>
                                     <button
@@ -2717,7 +3007,7 @@ const selectedOrderTotal = computed(() => {
 
                                             <!-- MODEL -->
                                             <td
-                                                class="px-1.5 py-2 font-semibold text-slate-900 dark:text-white break-words leading-tight"
+                                                class="px-1.5 py-2 font-semibold text-slate-900 dark:text-white break-   leading-tight"
                                             >
                                                 {{
                                                     item.nm_model ||
@@ -2762,7 +3052,7 @@ const selectedOrderTotal = computed(() => {
                                     </tbody>
 
                                     <!-- TOTAL -->
-                                    <tfoot
+                                    <!-- <tfoot
                                         class="bg-slate-50 dark:bg-slate-800/50"
                                     >
                                         <tr
@@ -2797,7 +3087,7 @@ const selectedOrderTotal = computed(() => {
                                                 }}
                                             </td>
                                         </tr>
-                                    </tfoot>
+                                    </tfoot> -->
                                 </table>
                             </div>
                         </div>
@@ -2923,20 +3213,6 @@ const selectedOrderTotal = computed(() => {
                                 </strong>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- ====================================================== -->
-                    <!-- 6. ACTION BUTTONS: CETAK FAKTUR & UNDUH PDF -->
-                    <!-- ====================================================== -->
-                    <div class="pt-2 flex items-center gap-2.5">
-                        <button
-                            type="button"
-                            @click="isFakturModalOpen = true"
-                            class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition active:scale-[0.98] cursor-pointer"
-                        >
-                            <Printer class="h-4 w-4" />
-                            <span>Cetak Faktur / Struk</span>
-                        </button>
                     </div>
                 </div>
             </SheetContent>
