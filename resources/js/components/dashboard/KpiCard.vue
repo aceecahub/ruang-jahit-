@@ -48,10 +48,14 @@ const isLargeNumber = computed(() => {
 });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 // 3. FORMAT ASLI FULL
 =======
 // 3. FORMAT ASLI FULL (Ini kode asli Anda, saya biarkan utuh)
 >>>>>>> 0048810 (responsif ui filter)
+=======
+// 3. FORMAT ASLI FULL
+>>>>>>> 2c781ee (revisi responsip design order)
 const formattedValue = computed(() => {
     const value = Number(props.value ?? 0);
 
@@ -123,7 +127,7 @@ const compactValue = computed(() => {
 >>>>>>> 37ac52e (dynamic data card orderan)
 });
 
-// 4. FORMAT SINGKATAN (Ini tambahannya, dengan spasi yang lebih lega)
+// 4. FORMAT SINGKATAN
 const compactValue = computed(() => {
     const val = Number(props.value ?? 0);
 
@@ -156,6 +160,7 @@ const compactValue = computed(() => {
 
 <template>
 <<<<<<< HEAD
+<<<<<<< HEAD
     <!-- Padding responsif: p-4 di mobile, p-5 di desktop -->
     <div
         class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-4 sm:p-5 shadow-sm shadow-slate-200/40 dark:shadow-none transition hover:border-slate-200 dark:hover:border-slate-700 flex flex-col justify-between"
@@ -174,6 +179,9 @@ const compactValue = computed(() => {
                 >
 =======
     <!-- Padding responsif: p-3.5 di mobile, p-5 di desktop -->
+=======
+    <!-- Padding responsif: p-4 di mobile, p-5 di desktop -->
+>>>>>>> 2c781ee (revisi responsip design order)
     <div class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-4 sm:p-5 shadow-sm shadow-slate-200/40 dark:shadow-none transition hover:border-slate-200 dark:hover:border-slate-700 flex flex-col justify-between">
 
         <!-- HEADER KARTU -->
@@ -202,6 +210,7 @@ const compactValue = computed(() => {
         </div>
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         <!-- MAIN ANGKA (TAMPILAN DESKTOP) -->
         <div class="mt-3 hidden sm:flex items-baseline gap-2.5">
             <span
@@ -220,11 +229,19 @@ const compactValue = computed(() => {
             </span>
             <span v-if="unit" class="text-[10px] sm:text-xs font-medium text-slate-400 dark:text-slate-500">
 >>>>>>> 0048810 (responsif ui filter)
+=======
+        <!-- MAIN ANGKA (TAMPILAN DESKTOP) -->
+        <div class="mt-3 hidden sm:flex items-baseline gap-2.5">
+            <span class="text-2xl font-bold text-slate-900 dark:text-white truncate">
+                {{ formattedValue }} <!-- Selalu tampil Full di Desktop -->
+            </span>
+            <span v-if="unit" class="text-xs font-medium text-slate-500">
+>>>>>>> 2c781ee (revisi responsip design order)
                 {{ unit }}
             </span>
             <span
                 v-if="change !== undefined"
-                class="hidden sm:inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full"
+                class="inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full"
                 :class="[
                     isPositive
                         ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40'
@@ -238,6 +255,7 @@ const compactValue = computed(() => {
         </div>
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         <!-- MAIN ANGKA (TAMPILAN MOBILE) -->
         <div class="mt-3 flex sm:hidden items-baseline gap-1.5">
             <span
@@ -245,6 +263,12 @@ const compactValue = computed(() => {
             >
                 {{ isLargeNumber ? compactValue : formattedValue }}
                 <!-- Tampil Singkat jika Besar di Mobile -->
+=======
+        <!-- MAIN ANGKA (TAMPILAN MOBILE) -->
+        <div class="mt-3 flex sm:hidden items-baseline gap-1.5">
+            <span class="text-xl font-bold text-slate-900 dark:text-white truncate">
+                {{ isLargeNumber ? compactValue : formattedValue }} <!-- Tampil Singkat jika Besar di Mobile -->
+>>>>>>> 2c781ee (revisi responsip design order)
             </span>
             <span v-if="unit" class="text-[10px] font-medium text-slate-400">
                 {{ unit }}
@@ -252,15 +276,20 @@ const compactValue = computed(() => {
         </div>
 
         <!-- FOOTER (TAMPILAN DESKTOP: HANYA TEKS, NO DROPDOWN) -->
+<<<<<<< HEAD
         <div
             class="mt-2 pt-2 border-t border-slate-50 dark:border-slate-800/50 hidden sm:block"
         >
+=======
+        <div class="mt-2 pt-2 border-t border-slate-50 dark:border-slate-800/50 hidden sm:block">
+>>>>>>> 2c781ee (revisi responsip design order)
             <p class="text-xs text-slate-500 truncate">
                 {{ periodText }}
             </p>
         </div>
 
         <!-- FOOTER & DROPDOWN (TAMPILAN MOBILE) -->
+<<<<<<< HEAD
         <div
             class="mt-2 pt-2 border-t border-slate-50 dark:border-slate-800/50 sm:hidden"
             :class="{
@@ -275,21 +304,25 @@ const compactValue = computed(() => {
                 </p>
 =======
         <!-- FOOTER & DROPDOWN -->
+=======
+>>>>>>> 2c781ee (revisi responsip design order)
         <div
-            class="mt-2 pt-2 border-t border-slate-50 dark:border-slate-800/50"
+            class="mt-2 pt-2 border-t border-slate-50 dark:border-slate-800/50 sm:hidden"
             :class="{
                 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 -mx-1.5 px-1.5 rounded-lg transition active:scale-[0.98]': isLargeNumber
             }"
             @click="isLargeNumber ? toggleExpand() : null"
         >
-            <!-- Area yang diklik -->
             <div class="flex items-center justify-between gap-2 select-none">
-                <p class="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 truncate">
+                <p class="text-[10px] text-slate-400 truncate">
                     {{ periodText }}
                 </p>
+<<<<<<< HEAD
 
                 <!-- Ikon Panah (Hanya muncul jika angka > 100.000) -->
 >>>>>>> 0048810 (responsif ui filter)
+=======
+>>>>>>> 2c781ee (revisi responsip design order)
                 <component
                     v-if="isLargeNumber"
                     :is="isExpanded ? ChevronUp : ChevronDown"
@@ -297,14 +330,18 @@ const compactValue = computed(() => {
                 />
             </div>
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
             <!-- Detail Angka Asli (Muncul ke Bawah) -->
 >>>>>>> 0048810 (responsif ui filter)
+=======
+>>>>>>> 2c781ee (revisi responsip design order)
             <div
                 v-if="isLargeNumber && isExpanded"
                 class="mt-2 pb-1 pt-1 border-t border-dashed border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-top-2 duration-200"
             >
+<<<<<<< HEAD
 <<<<<<< HEAD
                 <p class="text-[9px] font-medium text-slate-500 mb-0.5">
                     Detail Nilai Asli:
@@ -324,6 +361,10 @@ const compactValue = computed(() => {
                     Detail Nilai Asli:
                 </p>
                 <p class="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200">
+=======
+                <p class="text-[9px] font-medium text-slate-500 mb-0.5">Detail Nilai Asli:</p>
+                <p class="text-xs font-bold text-slate-700 dark:text-slate-200">
+>>>>>>> 2c781ee (revisi responsip design order)
                     {{ formattedValue }} <span v-if="unit && type !== 'currency'" class="font-normal text-[10px] text-slate-500">{{ unit }}</span>
                 </p>
             </div>

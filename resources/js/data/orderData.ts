@@ -45,18 +45,6 @@ export const ORDER_STATUS_MAP: Record<string, OrderStatusMeta> = {
     '2': { code: 2, label: 'Selesai', category: 'active', color: '#2563eb', badgeClass: 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50' },
 };
 
-<<<<<<< HEAD
-=======
-export const ORDER_TYPE_LABELS = [
-    'Kemeja & Seragam Kantor',
-    'Kaos Polo & Lacoste',
-    'Jaket, Parka & Rompi',
-    'Gamis & Busana Muslim',
-    'Wearpack & Praktik',
-    'Celana & Rok Formal',
-];
-
->>>>>>> 37ac52e (dynamic data card orderan)
 export const TODAY_DATE = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Asia/Jakarta',
 }).format(new Date());
