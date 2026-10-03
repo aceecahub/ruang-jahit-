@@ -1,16 +1,7 @@
 <script setup lang="ts">
 import { router } from "@inertiajs/vue3";
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-// import { ref, computed, watch } from "vue";
-
->>>>>>> 0048810 (responsif ui filter)
 import { ref, computed, watch, nextTick } from "vue";
 
-=======
-import { ref, computed, watch } from "vue";
->>>>>>> 37ac52e (dynamic data card orderan)
 import {
     Calendar,
     ChevronLeft,
@@ -26,11 +17,8 @@ import {
     Users,
     ArrowUpDown,
     Clock,
-<<<<<<< HEAD
     Printer,
     FileText,
-=======
->>>>>>> 0048810 (responsif ui filter)
     SlidersHorizontal,
     ChevronDown,
 } from "@lucide/vue";
@@ -103,7 +91,6 @@ type OrderListItem = {
     tgl_estimasi: string;
 };
 
-<<<<<<< HEAD
 type OrderDetailModel = {
     id_order: number;
     tgl_order: string;
@@ -113,8 +100,6 @@ type OrderDetailModel = {
     harga_jual: number;
 };
 
-=======
->>>>>>> 0048810 (responsif ui filter)
 type OrderPagination = {
     total_data: number;
     halaman: number;
@@ -124,7 +109,6 @@ type OrderPagination = {
 
 const props = defineProps<{
     isDark?: boolean;
-<<<<<<< HEAD
 
     orderanData?: number | string;
 
@@ -147,11 +131,8 @@ const props = defineProps<{
 
     orderList?: OrderListItem[];
 
-<<<<<<< HEAD
     orderDetailModels?: OrderDetailModel[];
 
-=======
->>>>>>> 0048810 (responsif ui filter)
     orderPagination?: OrderPagination;
 }>();
 
@@ -222,38 +203,6 @@ function formatMonth(dateString: string): string {
    FILTER PERIODE
    ============================================================ */
 
-=======
-    orderanData?: any;
-    totalKuantitas?: any;
-    totalHpp?: any;
-    totalJual?: any;
-}>();
-
-function fetchOrderan() {
-    const filterMap: Record<PeriodPreset, string> = {
-        today: "day",
-        this_week: "week",
-        this_month: "month",
-        this_year: "year",
-        custom: "custom",
-    };
-
-    router.get("/dashboard", {
-            filter: filterMap[activePreset.value],
-            tanggal_awal: startDate.value,
-            tanggal_akhir: endDate.value,
-        },
-        {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-            only: ["orderanMasuk", "totalKuantitas", "totalHpp", "totalJual", "filter", "tanggalAwal", "tanggalAkhir"],
-        },
-    );
-}
-
-// --- 1. Filter Periode State ---
->>>>>>> 37ac52e (dynamic data card orderan)
 type PeriodPreset =
     | "today"
     | "this_week"
@@ -455,50 +404,14 @@ function applyPreset(preset: PeriodPreset) {
         startDate.value = TODAY_DATE;
 
         endDate.value = TODAY_DATE;
-<<<<<<< HEAD
 
         currentPage.value = 1;
 
         fetchOrderan();
-=======
-        fetchOrderan();
-    } else if (preset === "this_week") {
-        // Monday of current week
-        const day = base.getDay();
-        const diffToMon = day === 0 ? -6 : 1 - day;
-        const mon = new Date(base);
-        mon.setDate(base.getDate() + diffToMon);
-        const sun = new Date(mon);
-        sun.setDate(mon.getDate() + 6);
-
-        startDate.value = mon.toISOString().slice(0, 10);
-        endDate.value = sun.toISOString().slice(0, 10);
-        fetchOrderan();
-    } else if (preset === "this_month") {
-        const y = base.getFullYear();
-        const m = String(base.getMonth() + 1).padStart(2, "0");
-        const lastDay = new Date(y, base.getMonth() + 1, 0).getDate();
-
-        startDate.value = `${y}-${m}-01`;
-        endDate.value = `${y}-${m}-${lastDay}`;
-        fetchOrderan();
-    } else if (preset === "this_year") {
-        const y = base.getFullYear();
-        startDate.value = `${y}-01-01`;
-        endDate.value = `${y}-12-31`;
-        fetchOrderan();
-    } else if (preset === "custom") {
-        startDate.value = customStartInput.value;
-        endDate.value = customEndInput.value;
-        fetchOrderan();
-    }
-}
->>>>>>> 37ac52e (dynamic data card orderan)
 
         return;
     }
 
-<<<<<<< HEAD
     if (preset === "this_week") {
         const day = base.getDay();
 
@@ -562,25 +475,6 @@ function applyPreset(preset: PeriodPreset) {
 
         fetchOrderan();
     }
-=======
-    activePreset.value = "custom";
-    startDate.value = customStartInput.value;
-    endDate.value = customEndInput.value;
-
-    router.get("/dashboard", {
-            filter: "custom",
-            tanggal_awal: startDate.value,
-            tanggal_akhir: endDate.value,
-        },
-        {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-        }
-    );
-
-    toast.success("Rentang tanggal khusus berhasil diterapkan");
->>>>>>> 37ac52e (dynamic data card orderan)
 }
 
 /* ============================================================
@@ -1542,14 +1436,19 @@ const orderTypeChartOptions = computed(() => ({
 
 const isDetailOpen = ref(false);
 const isFakturModalOpen = ref(false);
-
+const mobileTableFilterOpen = ref(false);
 const selectedOrder = ref<OrderListItem | null>(null);
+
+const selectedOrderModels = ref<OrderDetailModel[]>([]);
 
 function openOrderDetail(order: OrderListItem) {
     selectedOrder.value = order;
 
+    // Kosongkan detail sebelumnya agar model dari order sebelumnya
+    // tidak ikut tampil ketika order baru dibuka.
+    selectedOrderModels.value = [];
+
     isDetailOpen.value = true;
-<<<<<<< HEAD
 
     const filterMap: Record<PeriodPreset, string> = {
         today: "day",
@@ -1606,8 +1505,6 @@ function openOrderDetail(order: OrderListItem) {
             },
         },
     );
-=======
->>>>>>> 0048810 (responsif ui filter)
 }
 
 function openFakturModal(order: OrderListItem) {
@@ -1802,7 +1699,7 @@ const selectedOrderTotal = computed(() => {
                     <input
                         type="date"
                         v-model="customStartInput"
-                        class=" px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                        class="px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                     />
                 </div>
 
@@ -1814,7 +1711,7 @@ const selectedOrderTotal = computed(() => {
                     <input
                         type="date"
                         v-model="customEndInput"
-                        class="  px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                        class="px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                     />
                 </div>
 
@@ -1829,7 +1726,6 @@ const selectedOrderTotal = computed(() => {
         </section>
 
         <!-- Filter mobile. -->
-<<<<<<< HEAD
         <section
             class="min-w-0 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm shadow-slate-200/40 md:hidden dark:border-slate-800/80 dark:bg-slate-900 dark:shadow-none"
             aria-label="Filter periode order"
@@ -1967,136 +1863,6 @@ const selectedOrderTotal = computed(() => {
                 </div>
             </div>
         </section>
-=======
-<section
-    class="min-w-0 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm shadow-slate-200/40 md:hidden dark:border-slate-800/80 dark:bg-slate-900 dark:shadow-none"
-    aria-label="Filter periode order"
->
-    <div class="flex min-w-0 items-center justify-between gap-3">
-        <div class="min-w-0 flex-1" aria-live="polite">
-            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">
-                {{ mobilePeriodLabel }}
-            </p>
-            <p class="mt-1 text-xs font-semibold text-slate-800 dark:text-slate-100">
-                {{ formatDateIndo(startDate) }} – {{ formatDateIndo(endDate) }}
-            </p>
-        </div>
-
-        <button
-            type="button"
-            @click="toggleMobileFilter"
-            :aria-expanded="mobileFilterOpen"
-            aria-controls="order-mobile-period-panel"
-            class="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-blue-200/60 bg-blue-50/80 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50"
-        >
-            <SlidersHorizontal class="h-3.5 w-3.5" aria-hidden="true" />
-            Filter
-            <ChevronDown
-                class="h-3.5 w-3.5 transition-transform motion-reduce:transition-none"
-                :class="{ 'rotate-180': mobileFilterOpen }"
-                aria-hidden="true"
-            />
-        </button>
-    </div>
-
-    <div
-        v-show="mobileFilterOpen"
-        id="order-mobile-period-panel"
-        class="mt-2 border-t border-slate-100 pt-2 dark:border-slate-800"
-    >
-        <div
-            ref="mobilePresetList"
-            role="group"
-            aria-label="Pilihan periode"
-            class="relative flex min-w-0 flex-nowrap gap-1.5 overflow-x-auto pb-1"
-        >
-            <button
-                v-for="preset in mobilePeriodPresets"
-                :key="preset.key"
-                type="button"
-                @click="selectMobilePreset(preset.key)"
-                :aria-pressed="mobileSelectedPreset === preset.key"
-                class="min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded-lg border px-3 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
-                :class="
-                    mobileSelectedPreset === preset.key
-                        ? 'border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500'
-                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
-                "
-            >
-                {{ preset.label }}
-            </button>
-        </div>
-
-        <div
-            v-if="mobileSelectedPreset === 'custom'"
-            class="mt-2 grid min-w-0 grid-cols-2 gap-2"
-        >
-            <label class="min-w-0 text-xs font-medium text-slate-500 dark:text-slate-400">
-                Mulai
-                <input
-                    type="date"
-                    v-model="customStartInput"
-                    class="mt-1 block h-10 w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                />
-            </label>
-
-            <label class="min-w-0 text-xs font-medium text-slate-500 dark:text-slate-400">
-                Sampai
-                <input
-                    type="date"
-                    v-model="customEndInput"
-                    class="mt-1 block h-10 w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                />
-            </label>
-        </div>
-
-        <div class="mt-1 flex items-center justify-between gap-2">
-            <div
-                v-if="mobileSelectedPreset !== 'custom'"
-                class="flex items-center gap-1.5"
-            >
-                <button
-                    type="button"
-                    @click="navigatePeriod(-1)"
-                    :disabled="activePreset === 'custom'"
-                    aria-label="Periode sebelumnya"
-                    class="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                >
-                    <ChevronLeft class="h-4 w-4" aria-hidden="true" />
-                </button>
-
-                <button
-                    type="button"
-                    @click="navigatePeriod(1)"
-                    :disabled="activePreset === 'custom'"
-                    aria-label="Periode berikutnya"
-                    class="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                >
-                    <ChevronRight class="h-4 w-4" aria-hidden="true" />
-                </button>
-            </div>
-
-            <button
-                type="button"
-                @click="resetMobilePeriod"
-                class="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-1 text-xs font-semibold text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
-            >
-                <RotateCcw class="h-3.5 w-3.5" aria-hidden="true" />
-                Reset
-            </button>
-
-            <button
-                v-if="mobileSelectedPreset === 'custom'"
-                type="button"
-                @click="applyMobileCustomRange"
-                class="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white transition hover:bg-blue-700"
-            >
-                Terapkan
-            </button>
-        </div>
-    </div>
-</section>
->>>>>>> 0048810 (responsif ui filter)
 
         <!-- =========================================================
              KPI
@@ -2104,13 +1870,8 @@ const selectedOrderTotal = computed(() => {
 
         <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <KpiCard
-<<<<<<< HEAD
                 title="Job Order"
                 :value="Number(props.orderanData ?? 0)"
-=======
-                title="Total Orderan Masuk"
-                :value="Number(orderanData ?? 0)"
->>>>>>> 37ac52e (dynamic data card orderan)
                 unit="Order"
                 type="number"
                 period-text="Berdasarkan tgl_order periode"
@@ -2121,13 +1882,8 @@ const selectedOrderTotal = computed(() => {
             />
 
             <KpiCard
-<<<<<<< HEAD
                 title="Kuantitas Order"
                 :value="Number(props.totalKuantitas ?? 0)"
-=======
-                title="Total Kuantitas Pesanan"
-                :value="Number(totalKuantitas ?? 0)"
->>>>>>> 37ac52e (dynamic data card orderan)
                 unit="Pcs"
                 type="number"
                 period-text="Akumulasi total_qty pakaian"
@@ -2137,43 +1893,23 @@ const selectedOrderTotal = computed(() => {
                 icon-color="text-purple-600 dark:text-purple-400"
             />
 
-<<<<<<< HEAD
             <KpiCard
                 title="Total HPP"
                 :value="Number(props.totalHpp ?? 0)"
                 type="currency"
                 period-text="Akumulasi total_hpp"
                 tooltip="Total modal produksi berdasarkan HPP."
-=======
-            <!-- 7. Total HPP -->
-            <KpiCard
-                title="Total HPP Produksi"
-                :value="Number(totalHpp ?? 0)"
-                type="currency"
-                period-text="Akumulasi tot_hpp bahan & jahit"
-                tooltip="Total modal bahan baku kain dan upah tenaga kerja penjahit."
->>>>>>> 37ac52e (dynamic data card orderan)
                 :icon="Layers"
                 icon-bg="bg-slate-100 dark:bg-slate-800"
                 icon-color="text-slate-600 dark:text-slate-300"
             />
 
-<<<<<<< HEAD
             <KpiCard
                 title="Total Penjualan"
                 :value="Number(props.totalJual ?? 0)"
                 type="currency"
                 period-text="Akumulasi total_jual"
                 tooltip="Total nilai penjualan dari seluruh orderan terfilter."
-=======
-            <!-- 6. Total Penjualan -->
-            <KpiCard
-                title="Total Nilai Penjualan"
-                :value="Number(totalJual ?? 0)"
-                type="currency"
-                period-text="Akumulasi total_jual pesanan"
-                tooltip="Total omzet kotor dari seluruh orderan terfilter."
->>>>>>> 37ac52e (dynamic data card orderan)
                 :icon="Banknote"
                 icon-bg="bg-blue-50 dark:bg-blue-950/40"
                 icon-color="text-blue-600 dark:text-blue-400"
@@ -2326,51 +2062,64 @@ const selectedOrderTotal = computed(() => {
         <section
             class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-6 shadow-sm shadow-slate-200/40 dark:shadow-none space-y-4"
         >
-            <!-- TOOLBAR -->
-
+           <!-- TOOLBAR -->
             <div
                 class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800"
             >
-                <div>
-                    <h2
-                        class="text-base font-semibold text-slate-900 dark:text-white"
-                    >
-                        Daftar Orderan Masuk
-                    </h2>
+                <!-- Area Judul & Tombol Toggle Mobile -->
+                <div class="flex items-start justify-between w-full lg:w-auto gap-4">
+                    <div>
+                        <h2
+                            class="text-base font-semibold text-slate-900 dark:text-white"
+                        >
+                            Daftar Orderan Masuk
+                        </h2>
 
-                    <p class="text-xs text-slate-400 mt-0.5">
-                        Menampilkan orderan berdasarkan tgl_order periode
-                        terpilih
-                    </p>
+                        <p class="text-xs text-slate-400 mt-0.5">
+                            Menampilkan orderan berdasarkan tgl_order periode terpilih
+                        </p>
+                    </div>
+
+                    <!-- Tombol Filter Mobile (Sembunyi otomatis di Desktop) -->
+                    <button
+                        type="button"
+                        @click="mobileTableFilterOpen = !mobileTableFilterOpen"
+                        class="lg:hidden shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition cursor-pointer"
+                    >
+                        <Search class="h-3.5 w-3.5" />
+                        Cari
+                        <ChevronDown
+                            class="h-3.5 w-3.5 transition-transform"
+                            :class="{ 'rotate-180': mobileTableFilterOpen }"
+                        />
+                    </button>
                 </div>
 
+                <!-- Filter Controls (Sembunyi di Mobile jika ditutup, Selalu tampil di Desktop) -->
                 <div
-                    class="grid grid-cols-1 sm:flex sm:flex-wrap sm:items-center gap-2.5 w-full lg:w-auto"
+                    class="w-full lg:w-auto sm:flex-wrap sm:items-center gap-2 transition-all"
+                    :class="mobileTableFilterOpen ? 'grid sm:flex' : 'hidden lg:flex'"
                 >
                     <!-- SEARCH -->
-
                     <div class="relative w-full sm:w-64">
                         <Search
-                            class="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400"
+                            class="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400"
                         />
-
                         <input
                             type="text"
                             v-model="tableSearch"
                             placeholder="Cari no order / PO / pelanggan..."
-                            class="w-full pl-8.5 pr-3 py-2 sm:py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                            class="w-full pl-8 pr-3 py-1.5 sm:py-2 text-[11px] sm:text-xs rounded-lg sm:rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                         />
                     </div>
 
-                    <!-- FILTER -->
-
+                    <!-- FILTER STATUS & JENIS -->
                     <div class="grid grid-cols-2 sm:flex sm:items-center gap-2">
                         <select
                             v-model="statusFilter"
-                            class="w-full sm:w-auto px-3 py-2 sm:py-1.5 text-xs font-medium rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
+                            class="w-full sm:w-auto px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-medium rounded-lg sm:rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
                         >
                             <option value="ALL">Semua Status</option>
-
                             <option
                                 v-for="(value, key) in ORDER_STATUS_MAP"
                                 :key="key"
@@ -2382,10 +2131,9 @@ const selectedOrderTotal = computed(() => {
 
                         <select
                             v-model="typeFilter"
-                            class="w-full sm:w-auto px-3 py-2 sm:py-1.5 text-xs font-medium rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
+                            class="w-full sm:w-auto px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-medium rounded-lg sm:rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
                         >
                             <option value="ALL">Semua Jenis</option>
-
                             <option
                                 v-for="type in orderTypeOptions"
                                 :key="type.value"
@@ -2397,14 +2145,12 @@ const selectedOrderTotal = computed(() => {
                     </div>
 
                     <!-- EXPORT -->
-
                     <button
                         type="button"
                         @click="triggerCsvExport"
-                        class="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer shadow-xs transition"
+                        class="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer shadow-xs transition"
                     >
                         <Download class="h-3.5 w-3.5 text-slate-500" />
-
                         Ekspor CSV
                     </button>
                 </div>
@@ -3002,7 +2748,6 @@ const selectedOrderTotal = computed(() => {
                                     Informasi Order
                                 </h4>
 
-<<<<<<< HEAD
                                 <div
                                     class="space-y-2 text-xs text-slate-600 dark:text-slate-300"
                                 >
@@ -3369,21 +3114,13 @@ const selectedOrderTotal = computed(() => {
                     <!-- ====================================================== -->
                     <!-- 5. TOTAL -->
                     <!-- ====================================================== -->
-=======
-                    <!-- STATUS -->
-
->>>>>>> 0048810 (responsif ui filter)
                     <div
                         class="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 p-4"
                     >
                         <h4
                             class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600 mb-4"
                         >
-<<<<<<< HEAD
                             Total
-=======
-                            3. Status Order
->>>>>>> 0048810 (responsif ui filter)
                         </h4>
 
                         <div class="space-y-2.5 text-xs">
@@ -3391,43 +3128,6 @@ const selectedOrderTotal = computed(() => {
                             <div
                                 class="flex items-center justify-between gap-3"
                             >
-<<<<<<< HEAD
-=======
-                                {{
-                                    selectedOrder.nama_status ||
-                                    ORDER_STATUS_MAP[
-                                        String(selectedOrder.status)
-                                    ]?.label ||
-                                    `Status ${selectedOrder.status}`
-                                }}
-                            </span>
-                        </div>
-
-                        <div class="flex items-center justify-between">
-                            <span class="text-slate-500">
-                                Target selesai:
-                            </span>
-
-                            <strong class="text-slate-900 dark:text-white">
-                                {{ formatDateIndo(selectedOrder.tgl_estimasi) }}
-                            </strong>
-                        </div>
-                    </div>
-
-                    <!-- KEUANGAN -->
-
-                    <div
-                        class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-3 text-xs"
-                    >
-                        <h4
-                            class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
-                        >
-                            4. Informasi Keuangan
-                        </h4>
-
-                        <div class="space-y-2">
-                            <div class="flex justify-between">
->>>>>>> 0048810 (responsif ui filter)
                                 <span class="text-slate-500">
                                     Total Kuantitas
                                 </span>
@@ -3524,53 +3224,6 @@ const selectedOrderTotal = computed(() => {
                             </div>
                         </div>
                     </div>
-<<<<<<< HEAD
-=======
-
-                    <!-- DEADLINE -->
-
-                    <div
-                        class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-3 text-xs"
-                    >
-                        <h4
-                            class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
-                        >
-                            5. Deadline
-                        </h4>
-
-                        <div class="flex items-center justify-between">
-                            <span class="text-slate-500">
-                                Estimasi selesai
-                            </span>
-
-                            <strong class="text-slate-900 dark:text-white">
-                                {{ formatDateIndo(selectedOrder.tgl_estimasi) }}
-                            </strong>
-                        </div>
-
-                        <div
-                            v-if="isOrderOverdue(selectedOrder, TODAY_DATE)"
-                            class="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-semibold"
-                        >
-                            Order sudah melewati tanggal estimasi.
-                        </div>
-
-                        <div
-                            v-else-if="
-                                isOrderApproaching(selectedOrder, TODAY_DATE)
-                            "
-                            class="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 font-semibold"
-                        >
-                            Order mendekati tanggal estimasi.
-                        </div>
-                        <div
-                            v-else
-                            class="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-semibold"
-                        >
-                            Belum mendekati tanggal estimasi.
-                        </div>
-                    </div>
->>>>>>> 0048810 (responsif ui filter)
                 </div>
             </SheetContent>
         </Sheet>
