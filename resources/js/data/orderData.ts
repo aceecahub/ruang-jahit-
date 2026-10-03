@@ -103,27 +103,32 @@ export const DUMMY_ORDERS_DATA: OrderRecord[] = [
     },
 ];
 
+export type OrderLike = {
+    status: number | string;
+    tgl_estimasi?: string | null;
+    Delete?: boolean;
+};
+
 // Helper Functions
-export function isOrderActive(order: { status: number | string }): boolean {
+export function isOrderActive(order: OrderLike): boolean {
     return [0, 1, 2, 3].includes(Number(order.status));
 }
 
-export function isOrderCompleted(order: { status: number | string }): boolean {
+export function isOrderCompleted(order: OrderLike): boolean {
     return Number(order.status) === 4;
 }
 
-export function isOrderCancelled(order: { status: number | string; Delete?: boolean }): boolean {
+export function isOrderCancelled(order: OrderLike): boolean {
     return Number(order.status) === 5 || order.Delete === true;
 }
 
-export function isOrderOverdue(order: { status: number | string; tgl_estimasi?: string; Delete?: boolean }, referenceDate = TODAY_DATE): boolean {
-    if (isOrderCompleted(order) || isOrderCancelled(order)) return false;
-    return Boolean(order.tgl_estimasi && order.tgl_estimasi < referenceDate);
+export function isOrderOverdue(order: OrderLike, referenceDate = TODAY_DATE): boolean {
+    if (isOrderCompleted(order) || isOrderCancelled(order) || !order.tgl_estimasi) return false;
+    return order.tgl_estimasi < referenceDate;
 }
 
-export function isOrderApproaching(order: { status: number | string; tgl_estimasi?: string; Delete?: boolean }, referenceDate = TODAY_DATE): boolean {
-    if (isOrderCompleted(order) || isOrderCancelled(order) || isOrderOverdue(order, referenceDate)) return false;
-    if (!order.tgl_estimasi) return false;
+export function isOrderApproaching(order: OrderLike, referenceDate = TODAY_DATE): boolean {
+    if (isOrderCompleted(order) || isOrderCancelled(order) || !order.tgl_estimasi || isOrderOverdue(order, referenceDate)) return false;
     const diffDays = Math.ceil((new Date(order.tgl_estimasi).getTime() - new Date(referenceDate).getTime()) / (1000 * 3600 * 24));
     return diffDays >= 0 && diffDays <= 3;
 }
