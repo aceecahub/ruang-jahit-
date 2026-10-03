@@ -90,6 +90,18 @@ type OrderListItem = {
     tgl_estimasi: string;
 };
 
+<<<<<<< HEAD
+=======
+type OrderDetailModel = {
+    id_order: number;
+    tgl_order: string;
+    nm_model: string;
+    qty: number;
+    hpp: number;
+    harga_jual: number;
+};
+
+>>>>>>> 77390b0 (filter resposif list data)
 type OrderPagination = {
     total_data: number;
     halaman: number;
@@ -121,6 +133,11 @@ const props = defineProps<{
 
     orderList?: OrderListItem[];
 
+<<<<<<< HEAD
+=======
+    orderDetailModels?: OrderDetailModel[];
+
+>>>>>>> 77390b0 (filter resposif list data)
     orderPagination?: OrderPagination;
 }>();
 
@@ -1424,13 +1441,83 @@ const orderTypeChartOptions = computed(() => ({
    ============================================================ */
 
 const isDetailOpen = ref(false);
+<<<<<<< HEAD
 
+=======
+const isFakturModalOpen = ref(false);
+const mobileTableFilterOpen = ref(false);
+>>>>>>> 77390b0 (filter resposif list data)
 const selectedOrder = ref<OrderListItem | null>(null);
+
+const selectedOrderModels = ref<OrderDetailModel[]>([]);
 
 function openOrderDetail(order: OrderListItem) {
     selectedOrder.value = order;
 
+    // Kosongkan detail sebelumnya agar model dari order sebelumnya
+    // tidak ikut tampil ketika order baru dibuka.
+    selectedOrderModels.value = [];
+
     isDetailOpen.value = true;
+<<<<<<< HEAD
+=======
+
+    const filterMap: Record<PeriodPreset, string> = {
+        today: "day",
+        this_week: "week",
+        this_month: "month",
+        this_year: "year",
+        custom: "custom",
+    };
+
+    router.get(
+        "/dashboard",
+        {
+            filter: filterMap[activePreset.value],
+
+            tanggal_awal: startDate.value,
+
+            tanggal_akhir: endDate.value,
+
+            cari: tableSearch.value.trim() || null,
+
+            status: statusFilter.value === "ALL" ? null : statusFilter.value,
+
+            jenis_order: typeFilter.value === "ALL" ? null : typeFilter.value,
+
+            halaman: currentPage.value,
+
+            per_halaman: perPage.value,
+
+            urut_kolom: sortBy.value,
+
+            urut_arah: sortOrder.value.toUpperCase(),
+
+            id_order: order.id_order,
+        },
+        {
+            preserveState: true,
+
+            preserveScroll: true,
+
+            replace: true,
+
+            onSuccess: (page) => {
+                const pageProps = page.props as typeof page.props & {
+                    orderDetailModels?: OrderDetailModel[];
+                };
+
+                selectedOrderModels.value = pageProps.orderDetailModels ?? [];
+            },
+
+            onError: () => {
+                selectedOrderModels.value = [];
+
+                toast.error("Gagal mengambil detail model order.");
+            },
+        },
+    );
+>>>>>>> 77390b0 (filter resposif list data)
 }
 
 /* ============================================================
@@ -1562,7 +1649,7 @@ function openOrderDetail(order: OrderListItem) {
                     <input
                         type="date"
                         v-model="customStartInput"
-                        class=" px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                        class="px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                     />
                 </div>
 
@@ -1574,7 +1661,7 @@ function openOrderDetail(order: OrderListItem) {
                     <input
                         type="date"
                         v-model="customEndInput"
-                        class="  px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                        class="px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                     />
                 </div>
 
@@ -1589,6 +1676,7 @@ function openOrderDetail(order: OrderListItem) {
         </section>
 
         <!-- Filter mobile. -->
+<<<<<<< HEAD
 <section
     class="min-w-0 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm shadow-slate-200/40 md:hidden dark:border-slate-800/80 dark:bg-slate-900 dark:shadow-none"
     aria-label="Filter periode order"
@@ -1717,6 +1805,145 @@ function openOrderDetail(order: OrderListItem) {
         </div>
     </div>
 </section>
+=======
+        <section
+            class="min-w-0 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm shadow-slate-200/40 md:hidden dark:border-slate-800/80 dark:bg-slate-900 dark:shadow-none"
+            aria-label="Filter periode order"
+        >
+            <div class="flex min-w-0 items-center justify-between gap-3">
+                <div class="min-w-0 flex-1" aria-live="polite">
+                    <p
+                        class="text-xs font-medium text-slate-500 dark:text-slate-400"
+                    >
+                        {{ mobilePeriodLabel }}
+                    </p>
+                    <p
+                        class="mt-1 text-xs font-semibold text-slate-800 dark:text-slate-100"
+                    >
+                        {{ formatDateIndo(startDate) }} –
+                        {{ formatDateIndo(endDate) }}
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    @click="toggleMobileFilter"
+                    :aria-expanded="mobileFilterOpen"
+                    aria-controls="order-mobile-period-panel"
+                    class="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-blue-200/60 bg-blue-50/80 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50"
+                >
+                    <SlidersHorizontal class="h-3.5 w-3.5" aria-hidden="true" />
+                    Filter
+                    <ChevronDown
+                        class="h-3.5 w-3.5 transition-transform motion-reduce:transition-none"
+                        :class="{ 'rotate-180': mobileFilterOpen }"
+                        aria-hidden="true"
+                    />
+                </button>
+            </div>
+
+            <div
+                v-show="mobileFilterOpen"
+                id="order-mobile-period-panel"
+                class="mt-2 border-t border-slate-100 pt-2 dark:border-slate-800"
+            >
+                <div
+                    ref="mobilePresetList"
+                    role="group"
+                    aria-label="Pilihan periode"
+                    class="relative flex min-w-0 flex-nowrap gap-1.5 overflow-x-auto pb-1"
+                >
+                    <button
+                        v-for="preset in mobilePeriodPresets"
+                        :key="preset.key"
+                        type="button"
+                        @click="selectMobilePreset(preset.key)"
+                        :aria-pressed="mobileSelectedPreset === preset.key"
+                        class="min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded-lg border px-3 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+                        :class="
+                            mobileSelectedPreset === preset.key
+                                ? 'border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500'
+                                : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                        "
+                    >
+                        {{ preset.label }}
+                    </button>
+                </div>
+
+                <div
+                    v-if="mobileSelectedPreset === 'custom'"
+                    class="mt-2 grid min-w-0 grid-cols-2 gap-2"
+                >
+                    <label
+                        class="min-w-0 text-xs font-medium text-slate-500 dark:text-slate-400"
+                    >
+                        Mulai
+                        <input
+                            type="date"
+                            v-model="customStartInput"
+                            class="mt-1 block h-11 w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-slate-50 px-1.5 text-base text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                        />
+                    </label>
+
+                    <label
+                        class="min-w-0 text-xs font-medium text-slate-500 dark:text-slate-400"
+                    >
+                        Sampai
+                        <input
+                            type="date"
+                            v-model="customEndInput"
+                            class="mt-1 block h-11 w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-slate-50 px-1.5 text-base text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                        />
+                    </label>
+                </div>
+
+                <div class="mt-1 flex items-center justify-between gap-2">
+                    <div
+                        v-if="mobileSelectedPreset !== 'custom'"
+                        class="flex items-center gap-1.5"
+                    >
+                        <button
+                            type="button"
+                            @click="navigatePeriod(-1)"
+                            :disabled="activePreset === 'custom'"
+                            aria-label="Periode sebelumnya"
+                            class="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                        >
+                            <ChevronLeft class="h-4 w-4" aria-hidden="true" />
+                        </button>
+
+                        <button
+                            type="button"
+                            @click="navigatePeriod(1)"
+                            :disabled="activePreset === 'custom'"
+                            aria-label="Periode berikutnya"
+                            class="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                        >
+                            <ChevronRight class="h-4 w-4" aria-hidden="true" />
+                        </button>
+                    </div>
+
+                    <button
+                        type="button"
+                        @click="resetMobilePeriod"
+                        class="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-1 text-xs font-semibold text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
+                    >
+                        <RotateCcw class="h-3.5 w-3.5" aria-hidden="true" />
+                        Reset
+                    </button>
+
+                    <button
+                        v-if="mobileSelectedPreset === 'custom'"
+                        type="button"
+                        @click="applyMobileCustomRange"
+                        class="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white transition hover:bg-blue-700"
+                    >
+                        Terapkan
+                    </button>
+                </div>
+            </div>
+        </section>
+>>>>>>> 77390b0 (filter resposif list data)
 
         <!-- =========================================================
              KPI
@@ -1916,51 +2143,64 @@ function openOrderDetail(order: OrderListItem) {
         <section
             class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-6 shadow-sm shadow-slate-200/40 dark:shadow-none space-y-4"
         >
-            <!-- TOOLBAR -->
-
+           <!-- TOOLBAR -->
             <div
                 class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800"
             >
-                <div>
-                    <h2
-                        class="text-base font-semibold text-slate-900 dark:text-white"
-                    >
-                        Daftar Orderan Masuk
-                    </h2>
+                <!-- Area Judul & Tombol Toggle Mobile -->
+                <div class="flex items-start justify-between w-full lg:w-auto gap-4">
+                    <div>
+                        <h2
+                            class="text-base font-semibold text-slate-900 dark:text-white"
+                        >
+                            Daftar Orderan Masuk
+                        </h2>
 
-                    <p class="text-xs text-slate-400 mt-0.5">
-                        Menampilkan orderan berdasarkan tgl_order periode
-                        terpilih
-                    </p>
+                        <p class="text-xs text-slate-400 mt-0.5">
+                            Menampilkan orderan berdasarkan tgl_order periode terpilih
+                        </p>
+                    </div>
+
+                    <!-- Tombol Filter Mobile (Sembunyi otomatis di Desktop) -->
+                    <button
+                        type="button"
+                        @click="mobileTableFilterOpen = !mobileTableFilterOpen"
+                        class="lg:hidden shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition cursor-pointer"
+                    >
+                        <Search class="h-3.5 w-3.5" />
+                        Cari
+                        <ChevronDown
+                            class="h-3.5 w-3.5 transition-transform"
+                            :class="{ 'rotate-180': mobileTableFilterOpen }"
+                        />
+                    </button>
                 </div>
 
+                <!-- Filter Controls (Sembunyi di Mobile jika ditutup, Selalu tampil di Desktop) -->
                 <div
-                    class="grid grid-cols-1 sm:flex sm:flex-wrap sm:items-center gap-2.5 w-full lg:w-auto"
+                    class="w-full lg:w-auto sm:flex-wrap sm:items-center gap-2 transition-all"
+                    :class="mobileTableFilterOpen ? 'grid sm:flex' : 'hidden lg:flex'"
                 >
                     <!-- SEARCH -->
-
                     <div class="relative w-full sm:w-64">
                         <Search
-                            class="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400"
+                            class="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400"
                         />
-
                         <input
                             type="text"
                             v-model="tableSearch"
                             placeholder="Cari no order / PO / pelanggan..."
-                            class="w-full pl-8.5 pr-3 py-2 sm:py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                            class="w-full pl-8 pr-3 py-1.5 sm:py-2 text-[11px] sm:text-xs rounded-lg sm:rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                         />
                     </div>
 
-                    <!-- FILTER -->
-
+                    <!-- FILTER STATUS & JENIS -->
                     <div class="grid grid-cols-2 sm:flex sm:items-center gap-2">
                         <select
                             v-model="statusFilter"
-                            class="w-full sm:w-auto px-3 py-2 sm:py-1.5 text-xs font-medium rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
+                            class="w-full sm:w-auto px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-medium rounded-lg sm:rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
                         >
                             <option value="ALL">Semua Status</option>
-
                             <option
                                 v-for="(value, key) in ORDER_STATUS_MAP"
                                 :key="key"
@@ -1972,10 +2212,9 @@ function openOrderDetail(order: OrderListItem) {
 
                         <select
                             v-model="typeFilter"
-                            class="w-full sm:w-auto px-3 py-2 sm:py-1.5 text-xs font-medium rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
+                            class="w-full sm:w-auto px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-medium rounded-lg sm:rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
                         >
                             <option value="ALL">Semua Jenis</option>
-
                             <option
                                 v-for="type in orderTypeOptions"
                                 :key="type.value"
@@ -1987,14 +2226,12 @@ function openOrderDetail(order: OrderListItem) {
                     </div>
 
                     <!-- EXPORT -->
-
                     <button
                         type="button"
                         @click="triggerCsvExport"
-                        class="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer shadow-xs transition"
+                        class="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer shadow-xs transition"
                     >
                         <Download class="h-3.5 w-3.5 text-slate-500" />
-
                         Ekspor CSV
                     </button>
                 </div>
@@ -2554,12 +2791,400 @@ function openOrderDetail(order: OrderListItem) {
                     <!-- INFORMASI ORDER -->
 
                     <div
+<<<<<<< HEAD
                         class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2.5 text-xs"
+=======
+                        class="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 overflow-hidden"
+                    >
+                        <div class="grid grid-cols-2">
+                            <!-- ================================================== -->
+                            <!-- KOLOM KIRI - INFORMASI ORDER -->
+                            <!-- ================================================== -->
+                            <div class="p-4">
+                                <h4
+                                    class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600 mb-3"
+                                >
+                                    Informasi Order
+                                </h4>
+
+                                <div
+                                    class="space-y-2 text-xs text-slate-600 dark:text-slate-300"
+                                >
+                                    <div>
+                                        <div
+                                            class="text-[10px] text-slate-400 mb-0.5"
+                                        >
+                                            No Order
+                                        </div>
+
+                                        <strong
+                                            class="block text-slate-900 dark:text-white break-all"
+                                        >
+                                            {{ selectedOrder.no_order }}
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <div
+                                            class="text-[10px] text-slate-400 mb-0.5"
+                                        >
+                                            No PO
+                                        </div>
+
+                                        <strong
+                                            class="block text-slate-900 dark:text-white break-all"
+                                        >
+                                            {{ selectedOrder.no_po || "-" }}
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <div
+                                            class="text-[10px] text-slate-400 mb-0.5"
+                                        >
+                                            Jenis
+                                        </div>
+
+                                        <strong
+                                            class="block text-slate-900 dark:text-white"
+                                        >
+                                            {{
+                                                selectedOrder.nama_jenis ||
+                                                `Jenis ${selectedOrder.jenis_order}`
+                                            }}
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <div
+                                            class="text-[10px] text-slate-400 mb-0.5"
+                                        >
+                                            Tanggal Order
+                                        </div>
+
+                                        <strong
+                                            class="block text-slate-900 dark:text-white"
+                                        >
+                                            {{
+                                                formatDateIndo(
+                                                    selectedOrder.tgl_order,
+                                                )
+                                            }}
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <div
+                                            class="text-[10px] text-slate-400 mb-0.5"
+                                        >
+                                            Estimasi
+                                        </div>
+
+                                        <strong
+                                            class="block text-slate-900 dark:text-white"
+                                        >
+                                            {{
+                                                formatDateIndo(
+                                                    selectedOrder.tgl_estimasi,
+                                                )
+                                            }}
+                                        </strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ================================================== -->
+                            <!-- KOLOM KANAN - CUSTOMER + STATUS -->
+                            <!-- ================================================== -->
+                            <div
+                                class="border-l border-slate-200 dark:border-slate-700"
+                            >
+                                <!-- CUSTOMER -->
+                                <div class="p-4">
+                                    <h4
+                                        class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600 mb-3"
+                                    >
+                                        Informasi Pelanggan
+                                    </h4>
+
+                                    <div
+                                        class="space-y-2.5 text-xs text-slate-600 dark:text-slate-300"
+                                    >
+                                        <div>
+                                            <div
+                                                class="text-[10px] text-slate-400 mb-0.5"
+                                            >
+                                                Kode Pelanggan
+                                            </div>
+
+                                            <strong
+                                                class="block text-slate-900 dark:text-white break-all"
+                                            >
+                                                {{
+                                                    selectedOrder.kd_cus || "-"
+                                                }}
+                                            </strong>
+                                        </div>
+
+                                        <div>
+                                            <div
+                                                class="text-[10px] text-slate-400 mb-0.5"
+                                            >
+                                                Nama Pelanggan
+                                            </div>
+
+                                            <strong
+                                                class="block text-slate-900 dark:text-white break-words"
+                                            >
+                                                {{
+                                                    selectedOrder.nm_cus || "-"
+                                                }}
+                                            </strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- PEMISAH CUSTOMER / STATUS -->
+                                <div
+                                    class="border-t border-slate-200 dark:border-slate-700"
+                                ></div>
+
+                                <!-- STATUS -->
+                                <div class="p-4">
+                                    <h4
+                                        class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600 mb-3"
+                                    >
+                                        Status Order
+                                    </h4>
+
+                                    <div class="space-y-2.5 text-xs">
+                                        <div>
+                                            <div
+                                                class="text-[10px] text-slate-400 mb-0.5"
+                                            >
+                                                Target selesai
+                                            </div>
+
+                                            <strong
+                                                class="block text-slate-900 dark:text-white"
+                                            >
+                                                {{
+                                                    formatDateIndo(
+                                                        selectedOrder.tgl_estimasi,
+                                                    )
+                                                }}
+                                            </strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ====================================================== -->
+                    <!-- 3. DETAIL PESANAN -->
+                    <!-- ====================================================== -->
+                    <div
+                        class="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 overflow-hidden"
+                    >
+                        <!-- HEADER -->
+                        <div class="px-4 pt-4 pb-2">
+                            <div
+                                class="flex items-center justify-between gap-2"
+                            >
+                                <h4
+                                    class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
+                                >
+                                    Detail Pesanan
+                                </h4>
+
+                                <span
+                                    v-if="selectedOrderModels.length > 0"
+                                    class="text-[10px] font-semibold text-slate-400"
+                                >
+                                    {{ selectedOrderModels.length }} Model
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- TABLE -->
+                        <div
+                            v-if="selectedOrderModels.length > 0"
+                            class="px-3 pb-3"
+                        >
+                            <div
+                                class="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden"
+                            >
+                                <table class="w-full table-fixed text-[10px]">
+                                    <thead
+                                        class="bg-slate-100 dark:bg-slate-800"
+                                    >
+                                        <tr>
+                                            <!-- NO -->
+                                            <th
+                                                class="px-1.5 py-2 text-center font-semibold text-slate-500 dark:text-slate-400 w-[8%]"
+                                            >
+                                                No
+                                            </th>
+
+                                            <!-- MODEL -->
+                                            <th
+                                                class="px-1.5 py-2 text-left font-semibold text-slate-500 dark:text-slate-400 w-[36%]"
+                                            >
+                                                Model
+                                            </th>
+
+                                            <!-- PCS -->
+                                            <th
+                                                class="px-1 py-2 text-right font-semibold text-slate-500 dark:text-slate-400 w-[15%]"
+                                            >
+                                                Pcs
+                                            </th>
+
+                                            <!-- HPP -->
+                                            <th
+                                                class="px-1 py-2 text-right font-semibold text-slate-500 dark:text-slate-400 w-[20%]"
+                                            >
+                                                HPP
+                                            </th>
+
+                                            <!-- JUAL -->
+                                            <th
+                                                class="px-1.5 py-2 text-right font-semibold text-slate-500 dark:text-slate-400 w-[21%]"
+                                            >
+                                                Jual
+                                            </th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody
+                                        class="divide-y divide-slate-200 dark:divide-slate-700"
+                                    >
+                                        <tr
+                                            v-for="(
+                                                item, index
+                                            ) in selectedOrderModels"
+                                            :key="`${selectedOrder?.id_order}-${item.nm_model}-${index}`"
+                                            class="bg-white dark:bg-slate-900/30"
+                                        >
+                                            <!-- NO -->
+                                            <td
+                                                class="px-1.5 py-2 text-center text-slate-400"
+                                            >
+                                                {{ index + 1 }}
+                                            </td>
+
+                                            <!-- MODEL -->
+                                            <td
+                                                class="px-1.5 py-2 font-semibold text-slate-900 dark:text-white break-   leading-tight"
+                                            >
+                                                {{
+                                                    item.nm_model ||
+                                                    "Tanpa Nama Model"
+                                                }}
+                                            </td>
+
+                                            <!-- PCS -->
+                                            <td
+                                                class="px-1 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap"
+                                            >
+                                                {{ formatNumber(item.qty) }}
+                                            </td>
+
+                                            <!-- HPP -->
+                                            <td
+                                                class="px-1 py-2 text-right text-slate-700 dark:text-slate-300 whitespace-nowrap"
+                                            >
+                                                {{
+                                                    item.hpp !== undefined &&
+                                                    item.hpp !== null
+                                                        ? formatRupiah(item.hpp)
+                                                        : "-"
+                                                }}
+                                            </td>
+
+                                            <!-- HARGA JUAL -->
+                                            <td
+                                                class="px-1.5 py-2 text-right text-blue-600 dark:text-blue-400 font-semibold whitespace-nowrap"
+                                            >
+                                                {{
+                                                    item.harga_jual !==
+                                                        undefined &&
+                                                    item.harga_jual !== null
+                                                        ? formatRupiah(
+                                                              item.harga_jual,
+                                                          )
+                                                        : "-"
+                                                }}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+
+                                    <!-- TOTAL -->
+                                    <!-- <tfoot
+                                        class="bg-slate-50 dark:bg-slate-800/50"
+                                    >
+                                        <tr
+                                            class="font-semibold text-slate-700 dark:text-slate-200"
+                                        >
+                                            <td
+                                                colspan="2"
+                                                class="px-2 py-2 text-left"
+                                            >
+                                                Total
+                                            </td>
+
+                                            <td class="px-2 py-2 text-right">
+                                                {{ selectedOrderTotal.qty }}
+                                            </td>
+
+                                            <td class="px-2 py-2 text-right">
+                                                {{
+                                                    formatRupiah(
+                                                        selectedOrderTotal.hpp,
+                                                    )
+                                                }}
+                                            </td>
+
+                                            <td
+                                                class="px-2 py-2 text-right text-emerald-600"
+                                            >
+                                                {{
+                                                    formatRupiah(
+                                                        selectedOrderTotal.harga_jual,
+                                                    )
+                                                }}
+                                            </td>
+                                        </tr>
+                                    </tfoot> -->
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- EMPTY -->
+                        <div
+                            v-else
+                            class="px-4 pb-5 text-center text-xs text-slate-400"
+                        >
+                            Tidak ada detail model untuk order ini.
+                        </div>
+                    </div>
+
+                    <!-- ====================================================== -->
+                    <!-- 5. TOTAL -->
+                    <!-- ====================================================== -->
+                    <div
+                        class="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 p-4"
+>>>>>>> 77390b0 (filter resposif list data)
                     >
                         <h4
                             class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
                         >
+<<<<<<< HEAD
                             1. Informasi Order
+=======
+                            Total
+>>>>>>> 77390b0 (filter resposif list data)
                         </h4>
 
                         <div
@@ -2681,6 +3306,7 @@ function openOrderDetail(order: OrderListItem) {
                                     'bg-slate-100 text-slate-600'
                                 "
                             >
+<<<<<<< HEAD
                                 {{
                                     selectedOrder.nama_status ||
                                     ORDER_STATUS_MAP[
@@ -2715,6 +3341,8 @@ function openOrderDetail(order: OrderListItem) {
 
                         <div class="space-y-2">
                             <div class="flex justify-between">
+=======
+>>>>>>> 77390b0 (filter resposif list data)
                                 <span class="text-slate-500">
                                     Total Kuantitas
                                 </span>
@@ -2796,6 +3424,7 @@ function openOrderDetail(order: OrderListItem) {
                             </div>
                         </div>
                     </div>
+<<<<<<< HEAD
 
                     <!-- DEADLINE -->
 
@@ -2840,6 +3469,8 @@ function openOrderDetail(order: OrderListItem) {
                             Belum mendekati tanggal estimasi.
                         </div>
                     </div>
+=======
+>>>>>>> 77390b0 (filter resposif list data)
                 </div>
             </SheetContent>
         </Sheet>
