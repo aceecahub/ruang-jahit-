@@ -3148,7 +3148,7 @@ const selectedOrderTotal = computed(() => {
                                 </span>
 
                                 <strong class="text-slate-900 dark:text-white">
-                                    {{ formatNumber(selectedOrder.total_qty) }}
+                                    {{ formatNumber(selectedOrder?.total_qty) }}
                                     Pcs
                                 </strong>
                             </div>
