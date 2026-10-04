@@ -2523,6 +2523,7 @@ function openOrderDetail(order: OrderListItem) {
                 side="right"
                 class="w-full sm:max-w-lg p-0 overflow-y-auto"
             >
+
                 <div v-if="selectedOrder" class="p-6 space-y-6">
                     <!-- HEADER -->
 
@@ -3064,24 +3065,31 @@ function openOrderDetail(order: OrderListItem) {
                             3. Status Order
                         </h4>
 
-                        <div class="flex items-center justify-between">
-                            <span class="text-slate-500"> Status: </span>
+                        <div class="flex items-center justify-between pb-2">
+                                <span class="text-slate-500"> Status: </span>
 
-                            <span
-                                class="px-2.5 py-1 rounded-full text-xs font-semibold"
-                                :class="
-                                    ORDER_STATUS_MAP[
-                                        String(selectedOrder.status)
-                                    ]?.badgeClass ||
-                                    'bg-slate-100 text-slate-600'
-                                "
-                            >
+                                <span
+                                    class="px-2.5 py-1 rounded-full text-xs font-semibold"
+                                    :class="
+                                        ORDER_STATUS_MAP[String(selectedOrder?.status)]?.badgeClass ||
+                                        'bg-slate-100 text-slate-600'
+                                    "
+                                >
+                                    {{
+                                        selectedOrder?.nama_status ||
+                                        ORDER_STATUS_MAP[String(selectedOrder?.status)]?.label ||
+                                        `Status ${selectedOrder?.status}`
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-3 pt-1">
                                 <span class="text-slate-500">
                                     Total Kuantitas
                                 </span>
 
                                 <strong class="text-slate-900 dark:text-white">
-                                    {{ formatNumber(selectedOrder.total_qty) }}
+                                    {{ formatNumber(selectedOrder?.total_qty) }}
                                     Pcs
                                 </strong>
                             </div>
