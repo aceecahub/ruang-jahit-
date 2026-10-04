@@ -2694,6 +2694,9 @@ const selectedOrderTotal = computed(() => {
              DETAIL DRAWER
              ========================================================= -->
 
+       <!-- =========================================================
+             DETAIL DRAWER
+             ========================================================= -->
         <Sheet :open="isDetailOpen" @update:open="isDetailOpen = $event">
             <SheetContent
                 side="right"
@@ -2712,23 +2715,9 @@ const selectedOrderTotal = computed(() => {
                             >
                                 Detail Orderan
                             </span>
-
-                            <span
-                                class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold"
-                                :class="
-                                    ORDER_STATUS_MAP[
-                                        String(selectedOrder.status)
-                                    ]?.badgeClass ||
-                                    'bg-slate-100 text-slate-600'
-                                "
-                            >
-                                {{
-                                    selectedOrder.nama_status ||
-                                    ORDER_STATUS_MAP[
-                                        String(selectedOrder.status)
-                                    ]?.label ||
-                                    `Status ${selectedOrder.status}`
-                                }}
+                            <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
+                                :class="ORDER_STATUS_MAP[String(selectedOrder.status)]?.badgeClass || 'bg-slate-100 text-slate-600'">
+                                {{ selectedOrder.nama_status || ORDER_STATUS_MAP[String(selectedOrder.status)]?.label || `Status ${selectedOrder.status}` }}
                             </span>
                         </div>
 
@@ -2848,168 +2837,70 @@ const selectedOrderTotal = computed(() => {
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- ================================================== -->
-                            <!-- KOLOM KANAN - CUSTOMER + STATUS -->
-                            <!-- ================================================== -->
-                            <div
-                                class="border-l border-slate-200 dark:border-slate-700"
-                            >
-                                <!-- CUSTOMER -->
-                                <div class="p-4">
-                                    <h4
-                                        class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600 mb-3"
-                                    >
-                                        Informasi Pelanggan
-                                    </h4>
-
-                                    <div
-                                        class="space-y-2.5 text-xs text-slate-600 dark:text-slate-300"
-                                    >
-                                        <div>
-                                            <div
-                                                class="text-[10px] text-slate-400 mb-0.5"
-                                            >
-                                                Kode Pelanggan
-                                            </div>
-
-                                            <strong
-                                                class="block text-slate-900 dark:text-white break-all"
-                                            >
-                                                {{
-                                                    selectedOrder.kd_cus || "-"
-                                                }}
-                                            </strong>
-                                        </div>
-
-                                        <div>
-                                            <div
-                                                class="text-[10px] text-slate-400 mb-0.5"
-                                            >
-                                                Nama Pelanggan
-                                            </div>
-
-                                            <strong
-                                                class="block text-slate-900 dark:text-white break-words"
-                                            >
-                                                {{
-                                                    selectedOrder.nm_cus || "-"
-                                                }}
-                                            </strong>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- PEMISAH CUSTOMER / STATUS -->
-                                <div
-                                    class="border-t border-slate-200 dark:border-slate-700"
-                                ></div>
-
-                                <!-- STATUS -->
-                                <div class="p-4">
-                                    <h4
-                                        class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600 mb-3"
-                                    >
-                                        Status Order
-                                    </h4>
-
-                                    <div class="space-y-2.5 text-xs">
-                                        <div>
-                                            <div
-                                                class="text-[10px] text-slate-400 mb-0.5"
-                                            >
-                                                Target selesai
-                                            </div>
-
-                                            <strong
-                                                class="block text-slate-900 dark:text-white"
-                                            >
-                                                {{
-                                                    formatDateIndo(
-                                                        selectedOrder.tgl_estimasi,
-                                                    )
-                                                }}
-                                            </strong>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="flex justify-between gap-3">
+                                <span> Nama Pelanggan </span>
+                                <strong class="text-slate-900 dark:text-white text-right"> {{ selectedOrder.nm_cus || "-" }} </strong>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ====================================================== -->
-                    <!-- 3. DETAIL PESANAN -->
-                    <!-- ====================================================== -->
-                    <div
-                        class="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 overflow-hidden"
-                    >
-                        <!-- HEADER -->
-                        <div class="px-4 pt-4 pb-2">
-                            <div
-                                class="flex items-center justify-between gap-2"
-                            >
-                                <h4
-                                    class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
-                                >
-                                    Detail Pesanan
-                                </h4>
+                    <!-- 3. STATUS ORDER -->
+                    <div class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2.5 text-xs">
+                        <h4 class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600">
+                            3. Status Order
+                        </h4>
+                        <div class="flex items-center justify-between pb-2">
+                            <span class="text-slate-500"> Status: </span>
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold" :class="ORDER_STATUS_MAP[String(selectedOrder.status)]?.badgeClass || 'bg-slate-100 text-slate-600'">
+                                {{ selectedOrder.nama_status || ORDER_STATUS_MAP[String(selectedOrder.status)]?.label || `Status ${selectedOrder.status}` }}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between gap-3 pt-1">
+                            <span class="text-slate-500"> Total Kuantitas </span>
+                            <strong class="text-slate-900 dark:text-white"> {{ formatNumber(selectedOrder.total_qty) }} Pcs </strong>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500"> Total HPP </span>
+                            <strong class="text-slate-700 dark:text-slate-300"> {{ formatRupiah(selectedOrder.total_hpp) }} </strong>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500"> Total Penjualan </span>
+                            <strong class="text-blue-600 dark:text-blue-400"> {{ formatRupiah(selectedOrder.total_jual) }} </strong>
+                        </div>
+                        <div class="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
+                            <span class="font-bold text-slate-800 dark:text-slate-200"> Estimasi Laba Kotor </span>
+                            <strong class="font-extrabold text-emerald-600 dark:text-emerald-400">
+                                {{ formatRupiah(Number(selectedOrder.total_jual) - Number(selectedOrder.total_hpp)) }}
+                            </strong>
+                        </div>
+                        <div class="flex justify-between text-xs text-slate-500">
+                            <span> Margin Laba Kotor </span>
+                            <strong class="text-emerald-600 dark:text-emerald-400">
+                                {{ Number(selectedOrder.total_jual) > 0 ? (((Number(selectedOrder.total_jual) - Number(selectedOrder.total_hpp)) / Number(selectedOrder.total_jual)) * 100).toFixed(1) : "0.0" }}%
+                            </strong>
+                        </div>
+                    </div>
 
-                                <span
-                                    v-if="selectedOrderModels.length > 0"
-                                    class="text-[10px] font-semibold text-slate-400"
-                                >
+                    <!-- 4. DETAIL PESANAN -->
+                    <div class="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 overflow-hidden">
+                        <div class="px-4 pt-4 pb-2">
+                            <div class="flex items-center justify-between gap-2">
+                                <h4 class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"> 4. Detail Pesanan </h4>
+                                <span v-if="selectedOrderModels.length > 0" class="text-[10px] font-semibold text-slate-400">
                                     {{ selectedOrderModels.length }} Model
                                 </span>
                             </div>
                         </div>
-
-                        <!-- TABLE -->
-                        <div
-                            v-if="selectedOrderModels.length > 0"
-                            class="px-3 pb-3"
-                        >
-                            <div
-                                class="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden"
-                            >
+                        <div v-if="selectedOrderModels.length > 0" class="px-3 pb-3">
+                            <div class="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
                                 <table class="w-full table-fixed text-[10px]">
-                                    <thead
-                                        class="bg-slate-100 dark:bg-slate-800"
-                                    >
+                                    <thead class="bg-slate-100 dark:bg-slate-800">
                                         <tr>
-                                            <!-- NO -->
-                                            <th
-                                                class="px-1.5 py-2 text-center font-semibold text-slate-500 dark:text-slate-400 w-[8%]"
-                                            >
-                                                No
-                                            </th>
-
-                                            <!-- MODEL -->
-                                            <th
-                                                class="px-1.5 py-2 text-left font-semibold text-slate-500 dark:text-slate-400 w-[36%]"
-                                            >
-                                                Model
-                                            </th>
-
-                                            <!-- PCS -->
-                                            <th
-                                                class="px-1 py-2 text-right font-semibold text-slate-500 dark:text-slate-400 w-[15%]"
-                                            >
-                                                Pcs
-                                            </th>
-
-                                            <!-- HPP -->
-                                            <th
-                                                class="px-1 py-2 text-right font-semibold text-slate-500 dark:text-slate-400 w-[20%]"
-                                            >
-                                                HPP
-                                            </th>
-
-                                            <!-- JUAL -->
-                                            <th
-                                                class="px-1.5 py-2 text-right font-semibold text-slate-500 dark:text-slate-400 w-[21%]"
-                                            >
-                                                Jual
-                                            </th>
+                                            <th class="px-1.5 py-2 text-center font-semibold text-slate-500 dark:text-slate-400 w-[8%]"> No </th>
+                                            <th class="px-1.5 py-2 text-left font-semibold text-slate-500 dark:text-slate-400 w-[36%]"> Model </th>
+                                            <th class="px-1 py-2 text-right font-semibold text-slate-500 dark:text-slate-400 w-[15%]"> Pcs </th>
+                                            <th class="px-1 py-2 text-right font-semibold text-slate-500 dark:text-slate-400 w-[20%]"> HPP </th>
+                                            <th class="px-1.5 py-2 text-right font-semibold text-slate-500 dark:text-slate-400 w-[21%]"> Jual </th>
                                         </tr>
                                     </thead>
 
@@ -3075,53 +2966,10 @@ const selectedOrderTotal = computed(() => {
                                             </td>
                                         </tr>
                                     </tbody>
-
-                                    <!-- TOTAL -->
-                                    <!-- <tfoot
-                                        class="bg-slate-50 dark:bg-slate-800/50"
-                                    >
-                                        <tr
-                                            class="font-semibold text-slate-700 dark:text-slate-200"
-                                        >
-                                            <td
-                                                colspan="2"
-                                                class="px-2 py-2 text-left"
-                                            >
-                                                Total
-                                            </td>
-
-                                            <td class="px-2 py-2 text-right">
-                                                {{ selectedOrderTotal.qty }}
-                                            </td>
-
-                                            <td class="px-2 py-2 text-right">
-                                                {{
-                                                    formatRupiah(
-                                                        selectedOrderTotal.hpp,
-                                                    )
-                                                }}
-                                            </td>
-
-                                            <td
-                                                class="px-2 py-2 text-right text-emerald-600"
-                                            >
-                                                {{
-                                                    formatRupiah(
-                                                        selectedOrderTotal.harga_jual,
-                                                    )
-                                                }}
-                                            </td>
-                                        </tr>
-                                    </tfoot> -->
                                 </table>
                             </div>
                         </div>
-
-                        <!-- EMPTY -->
-                        <div
-                            v-else
-                            class="px-4 pb-5 text-center text-xs text-slate-400"
-                        >
+                        <div v-else class="px-4 pb-5 text-center text-xs text-slate-400">
                             Tidak ada detail model untuk order ini.
                         </div>
                     </div>
