@@ -1577,7 +1577,7 @@ function openOrderDetail(order: OrderListItem) {
                     <input
                         type="date"
                         v-model="customStartInput"
-                        class="px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                        class=" px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                     />
                 </div>
 
@@ -1589,7 +1589,7 @@ function openOrderDetail(order: OrderListItem) {
                     <input
                         type="date"
                         v-model="customEndInput"
-                        class="px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                        class="  px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                     />
                 </div>
 
@@ -1974,6 +1974,7 @@ function openOrderDetail(order: OrderListItem) {
                         <Search
                             class="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400"
                         />
+
                         <input
                             type="text"
                             v-model="tableSearch"
@@ -1989,6 +1990,7 @@ function openOrderDetail(order: OrderListItem) {
                             class="w-full sm:w-auto px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-medium rounded-lg sm:rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
                         >
                             <option value="ALL">Semua Status</option>
+
                             <option
                                 v-for="(value, key) in ORDER_STATUS_MAP"
                                 :key="key"
@@ -2003,6 +2005,7 @@ function openOrderDetail(order: OrderListItem) {
                             class="w-full sm:w-auto px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-medium rounded-lg sm:rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
                         >
                             <option value="ALL">Semua Jenis</option>
+
                             <option
                                 v-for="type in orderTypeOptions"
                                 :key="type.value"
@@ -2020,6 +2023,7 @@ function openOrderDetail(order: OrderListItem) {
                         class="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer shadow-xs transition"
                     >
                         <Download class="h-3.5 w-3.5 text-slate-500" />
+
                         Ekspor CSV
                     </button>
                 </div>
@@ -2551,6 +2555,7 @@ function openOrderDetail(order: OrderListItem) {
                         <SheetTitle class="text-lg font-bold text-slate-900 dark:text-white mt-1">
                             {{ selectedOrder.no_order }}
                         </SheetTitle>
+
                         <SheetDescription class="text-xs text-slate-400">
                             Informasi order berdasarkan data orderan.
                         </SheetDescription>
