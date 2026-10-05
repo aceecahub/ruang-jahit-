@@ -190,23 +190,28 @@ class DashboardController extends Controller
         // v_dash_order_distribusi menyediakan id_order, nm_model, dan qty.
         // Data ini dipakai drawer detail agar setiap order bisa menampilkan
         // rincian model seperti line item pada faktur.
-        $idOrder = $request->input('id_order');
+        $orderIds = collect($orderList)
+            ->pluck('id_order')
+            ->filter(fn ($id) => $id !== null && $id !== '')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
 
         $orderDetailModels = collect();
 
-        if ($idOrder !== null && $idOrder !== '') {
+        if ($orderIds->isNotEmpty()) {
+            $placeholders = implode(',', array_fill(0, $orderIds->count(), '?'));
+
             $detailRows = DB::select(
                 "SELECT
                     id_order,
                     nm_model,
-                    SUM(qty) AS qty,
-                    SUM(qty * hpp) AS hpp,
-                    SUM(qty * hrg_jual) AS harga_jual
+                    SUM(qty) AS qty
                 FROM dbo.v_dash_order_distribusi
-                WHERE id_order = ?
+                WHERE id_order IN ($placeholders)
                 GROUP BY id_order, nm_model
-                ORDER BY nm_model",
-                [(int) $idOrder]
+                ORDER BY id_order, nm_model",
+                $orderIds->all()
             );
 
             $orderDetailModels = collect($detailRows)
@@ -214,8 +219,6 @@ class DashboardController extends Controller
                     'id_order' => (int) $item->id_order,
                     'nm_model' => $item->nm_model ?: 'Tanpa Nama Model',
                     'qty' => (float) $item->qty,
-                    'hpp' => (float) ($item->hpp ?? 0),
-                    'harga_jual' => (float) ($item->harga_jual ?? 0),
                 ])
                 ->values();
         }

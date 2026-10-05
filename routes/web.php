@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\OrderRekapController;
 
 Route::redirect('/', '/login')->name('home');
 

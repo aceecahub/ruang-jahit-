@@ -134,6 +134,8 @@ export function isOrderApproaching(order: OrderLike, referenceDate = TODAY_DATE)
 }
 
 // KPI Calculation from Array of Orders
+
+// KPI Calculation from Array of Orders
 export interface OrderKpis {
     totalOrders: number;
     activeOrders: number;
