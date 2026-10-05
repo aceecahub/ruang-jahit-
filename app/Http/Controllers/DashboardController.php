@@ -221,7 +221,9 @@ class DashboardController extends Controller
                 "SELECT
                     id_order,
                     nm_model,
-                    SUM(qty) AS qty
+                    SUM(qty) AS qty,
+                    SUM(qty * hpp) AS hpp,
+                    SUM(qty * hrg_jual) AS harga_jual
                 FROM dbo.v_dash_order_distribusi
                 WHERE id_order IN ($placeholders)
                 GROUP BY id_order, nm_model
@@ -238,8 +240,15 @@ class DashboardController extends Controller
                     $orderTotalJual = (float) ($matchedOrder['total_jual'] ?? 0);
 
                     $qty = (float) $item->qty;
-                    $hpp = $orderTotalQty > 0 ? round(($qty / $orderTotalQty) * $orderTotalHpp, 2) : 0;
-                    $hargaJual = $orderTotalQty > 0 ? round(($qty / $orderTotalQty) * $orderTotalJual, 2) : 0;
+
+                    // Ambil hasil perkalian langsung dari SUM(qty * hpp) dan SUM(qty * hrg_jual)
+                    $hpp = isset($item->hpp) && $item->hpp !== null && (float) $item->hpp > 0
+                        ? (float) $item->hpp
+                        : ($orderTotalQty > 0 ? round(($qty / $orderTotalQty) * $orderTotalHpp, 2) : 0);
+
+                    $hargaJual = isset($item->harga_jual) && $item->harga_jual !== null && (float) $item->harga_jual > 0
+                        ? (float) $item->harga_jual
+                        : ($orderTotalQty > 0 ? round(($qty / $orderTotalQty) * $orderTotalJual, 2) : 0);
 
                     return [
                         'id_order' => $idOrder,
