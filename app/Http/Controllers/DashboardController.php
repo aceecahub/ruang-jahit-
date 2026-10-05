@@ -210,6 +210,8 @@ class DashboardController extends Controller
             ->unique()
             ->values();
 
+        $ordersById = collect($orderList)->keyBy(fn ($o) => (int) $o['id_order']);
+
         $orderDetailModels = collect();
 
         if ($orderIds->isNotEmpty()) {
@@ -228,11 +230,25 @@ class DashboardController extends Controller
             );
 
             $orderDetailModels = collect($detailRows)
-                ->map(fn ($item) => [
-                    'id_order' => (int) $item->id_order,
-                    'nm_model' => $item->nm_model ?: 'Tanpa Nama Model',
-                    'qty' => (float) $item->qty,
-                ])
+                ->map(function ($item) use ($ordersById) {
+                    $idOrder = (int) $item->id_order;
+                    $matchedOrder = $ordersById->get($idOrder);
+                    $orderTotalQty = (float) ($matchedOrder['total_qty'] ?? 0);
+                    $orderTotalHpp = (float) ($matchedOrder['total_hpp'] ?? 0);
+                    $orderTotalJual = (float) ($matchedOrder['total_jual'] ?? 0);
+
+                    $qty = (float) $item->qty;
+                    $hpp = $orderTotalQty > 0 ? round(($qty / $orderTotalQty) * $orderTotalHpp, 2) : 0;
+                    $hargaJual = $orderTotalQty > 0 ? round(($qty / $orderTotalQty) * $orderTotalJual, 2) : 0;
+
+                    return [
+                        'id_order' => $idOrder,
+                        'nm_model' => $item->nm_model ?: 'Tanpa Nama Model',
+                        'qty' => $qty,
+                        'hpp' => $hpp,
+                        'harga_jual' => $hargaJual,
+                    ];
+                })
                 ->values();
         }
 

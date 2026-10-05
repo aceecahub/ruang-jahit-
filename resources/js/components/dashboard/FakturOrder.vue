@@ -75,17 +75,33 @@ const formatMode = ref<'faktur' | 'struk'>('faktur');
 
 // Line items with fallback to summary if model breakdown is empty
 const lineItems = computed(() => {
+    const orderTotalJual = Number(props.order?.total_jual || 0);
+    const orderTotalQty = Number(props.order?.total_qty || 0);
+
     if (props.models && props.models.length > 0) {
-        return props.models.map((item, idx) => ({
-            no: idx + 1,
-            name: item.nm_model || 'Model Pakaian',
-            qty: Number(item.qty || 0),
-            unitPrice:
-                Number(item.qty) > 0
-                    ? Math.round(Number(item.harga_jual || 0) / Number(item.qty))
-                    : 0,
-            subtotal: Number(item.harga_jual || 0),
-        }));
+        const hasExplicitPrice = props.models.some(
+            (m) => Number(m.harga_jual || 0) > 0
+        );
+
+        return props.models.map((item, idx) => {
+            const qty = Number(item.qty || 0);
+            let subtotal = Number(item.harga_jual || 0);
+
+            // Jika harga_jual di model tidak ada / 0, distribusikan dari total_jual pesanan
+            if (!hasExplicitPrice && orderTotalQty > 0 && orderTotalJual > 0) {
+                subtotal = Math.round((qty / orderTotalQty) * orderTotalJual);
+            }
+
+            const unitPrice = qty > 0 ? Math.round(subtotal / qty) : subtotal;
+
+            return {
+                no: idx + 1,
+                name: item.nm_model || 'Model Pakaian',
+                qty: qty,
+                unitPrice: unitPrice,
+                subtotal: subtotal,
+            };
+        });
     }
 
     if (props.order) {
@@ -113,10 +129,12 @@ const totalQuantity = computed(() => {
 });
 
 const totalAmount = computed(() => {
+    const orderTotalJual = Number(props.order?.total_jual || 0);
     if (lineItems.value.length > 0) {
-        return lineItems.value.reduce((sum, item) => sum + item.subtotal, 0);
+        const sum = lineItems.value.reduce((sum, item) => sum + item.subtotal, 0);
+        if (sum > 0) return sum;
     }
-    return Number(props.order?.total_jual || 0);
+    return orderTotalJual;
 });
 
 // Info Toko
