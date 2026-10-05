@@ -57,12 +57,25 @@ const props = defineProps<{
         tgl_estimasi: string;
     }>;
 
+    orderDetailModels?: Array<{
+        id_order: number;
+        tgl_order: string;
+        nm_model: string;
+        qty: number;
+        hpp: number;
+        harga_jual: number;
+    }>;
+
     orderPagination?: {
         total_data: number;
         halaman: number;
         per_halaman: number;
         total_halaman: number;
     };
+
+    filter?: string;
+    tanggalAwal?: string;
+    tanggalAkhir?: string;
 }>();
 
 // Theme tracking
@@ -117,7 +130,11 @@ onMounted(() => {
                 :distribusi-model="props.distribusiModel"
                 :trend-kuantitas="props.trendKuantitas"
                 :order-list="props.orderList"
+                :order-detail-models="props.orderDetailModels"
                 :order-pagination="props.orderPagination"
+                :filter="props.filter"
+                :tanggal-awal="props.tanggalAwal"
+                :tanggal-akhir="props.tanggalAkhir"
             />
         </main>
     </div>
