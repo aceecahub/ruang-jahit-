@@ -93,8 +93,9 @@ type OrderListItem = {
 
 type OrderDetailModel = {
     id_order: number;
-    tgl_order: string;
+    tgl_order?: string;
     nm_model: string;
+    size?: string;
     qty: number;
     hpp: number;
     harga_jual: number;
@@ -1455,19 +1456,27 @@ function getModelHpp(item: OrderDetailModel): number {
     const orderTotalQty = Number(selectedOrder.value?.total_qty || 0);
     const orderTotalHpp = Number(selectedOrder.value?.total_hpp || 0);
     if (orderTotalQty > 0 && orderTotalHpp > 0) {
-        return Math.round((Number(item.qty || 0) / orderTotalQty) * orderTotalHpp);
+        return Math.round(
+            (Number(item.qty || 0) / orderTotalQty) * orderTotalHpp,
+        );
     }
     return 0;
 }
 
 function getModelHargaJual(item: OrderDetailModel): number {
-    if (item.harga_jual !== undefined && item.harga_jual !== null && Number(item.harga_jual) > 0) {
+    if (
+        item.harga_jual !== undefined &&
+        item.harga_jual !== null &&
+        Number(item.harga_jual) > 0
+    ) {
         return Number(item.harga_jual);
     }
     const orderTotalQty = Number(selectedOrder.value?.total_qty || 0);
     const orderTotalJual = Number(selectedOrder.value?.total_jual || 0);
     if (orderTotalQty > 0 && orderTotalJual > 0) {
-        return Math.round((Number(item.qty || 0) / orderTotalQty) * orderTotalJual);
+        return Math.round(
+            (Number(item.qty || 0) / orderTotalQty) * orderTotalJual,
+        );
     }
     return 0;
 }
@@ -1475,7 +1484,7 @@ function getModelHargaJual(item: OrderDetailModel): number {
 function openOrderDetail(order: OrderListItem) {
     selectedOrder.value = order;
     const existing = (props.orderDetailModels ?? []).filter(
-        (m) => Number(m.id_order) === Number(order.id_order)
+        (m) => Number(m.id_order) === Number(order.id_order),
     );
     selectedOrderModels.value = existing;
     isDetailOpen.value = true;
@@ -1484,7 +1493,7 @@ function openOrderDetail(order: OrderListItem) {
 function openFakturModal(order: OrderListItem) {
     selectedOrder.value = order;
     const existing = (props.orderDetailModels ?? []).filter(
-        (m) => Number(m.id_order) === Number(order.id_order)
+        (m) => Number(m.id_order) === Number(order.id_order),
     );
     selectedOrderModels.value = existing;
     isDetailOpen.value = false;
@@ -1496,11 +1505,13 @@ watch(
     (newVal) => {
         if (selectedOrder.value && newVal) {
             selectedOrderModels.value = newVal.filter(
-                (m) => Number(m.id_order) === Number(selectedOrder.value?.id_order)
+                (m) =>
+                    Number(m.id_order) ===
+                    Number(selectedOrder.value?.id_order),
             );
         }
     },
-    { deep: true }
+    { deep: true },
 );
 
 const selectedOrderTotal = computed(() => {
@@ -1694,7 +1705,11 @@ const selectedOrderTotal = computed(() => {
                     <p
                         class="mt-1 text-xs font-semibold text-slate-800 dark:text-slate-100"
                     >
-                        {{ startDate === endDate ? formatDateIndo(startDate) : `${formatDateIndo(startDate)} – ${formatDateIndo(endDate)}` }}
+                        {{
+                            startDate === endDate
+                                ? formatDateIndo(startDate)
+                                : `${formatDateIndo(startDate)} – ${formatDateIndo(endDate)}`
+                        }}
                     </p>
                 </div>
 
@@ -2982,13 +2997,16 @@ const selectedOrderTotal = computed(() => {
                                                 {{ index + 1 }}
                                             </td>
 
-                                            <!-- MODEL -->
                                             <td
-                                                class="px-1.5 py-2 font-semibold text-slate-900 dark:text-white break- leading-tight"
+                                                class="px-1.5 py-2 font-semibold text-slate-900 dark:text-white break-words leading-tight"
                                             >
                                                 {{
                                                     item.nm_model ||
                                                     "Tanpa Nama Model"
+                                                }}{{
+                                                    item.size
+                                                        ? " (" + item.size + ")"
+                                                        : ""
                                                 }}
                                             </td>
 
@@ -3005,7 +3023,9 @@ const selectedOrderTotal = computed(() => {
                                             >
                                                 {{
                                                     getModelHpp(item) > 0
-                                                        ? formatRupiah(getModelHpp(item))
+                                                        ? formatRupiah(
+                                                              getModelHpp(item),
+                                                          )
                                                         : "-"
                                                 }}
                                             </td>
@@ -3017,7 +3037,9 @@ const selectedOrderTotal = computed(() => {
                                                 {{
                                                     getModelHargaJual(item) > 0
                                                         ? formatRupiah(
-                                                              getModelHargaJual(item),
+                                                              getModelHargaJual(
+                                                                  item,
+                                                              ),
                                                           )
                                                         : "-"
                                                 }}

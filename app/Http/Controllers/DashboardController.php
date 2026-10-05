@@ -221,13 +221,14 @@ class DashboardController extends Controller
                 "SELECT
                     id_order,
                     nm_model,
+                    size,
                     SUM(qty) AS qty,
                     SUM(qty * hpp) AS hpp,
                     SUM(qty * hrg_jual) AS harga_jual
                 FROM dbo.v_dash_order_distribusi
                 WHERE id_order IN ($placeholders)
-                GROUP BY id_order, nm_model
-                ORDER BY id_order, nm_model",
+                GROUP BY id_order, nm_model, size
+                ORDER BY id_order, nm_model, size",
                 $orderIds->all()
             );
 
@@ -253,6 +254,7 @@ class DashboardController extends Controller
                     return [
                         'id_order' => $idOrder,
                         'nm_model' => $item->nm_model ?: 'Tanpa Nama Model',
+                        'size' => !empty($item->size) ? trim((string) $item->size) : null,
                         'qty' => $qty,
                         'hpp' => $hpp,
                         'harga_jual' => $hargaJual,
