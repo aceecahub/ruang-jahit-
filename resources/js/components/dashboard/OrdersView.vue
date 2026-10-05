@@ -24,6 +24,7 @@ import {
 } from "@lucide/vue";
 
 import KpiCard from "./KpiCard.vue";
+import FakturOrder from "./FakturOrder.vue";
 
 import {
     ORDER_STATUS_MAP,
@@ -129,6 +130,8 @@ const props = defineProps<{
     }>;
 
     orderList?: OrderListItem[];
+
+    orderDetailModels?: OrderDetailModel[];
 
     orderPagination?: OrderPagination;
 }>();
@@ -1413,8 +1416,7 @@ const orderTypeChartOptions = computed(() => ({
 
                 font: {
                     size: 10,
-
-                    weight: "600",
+                    weight: "bold" as const,
                 },
             },
 
@@ -1433,7 +1435,9 @@ const orderTypeChartOptions = computed(() => ({
    ============================================================ */
 
 const isDetailOpen = ref(false);
-const mobileTableFilterOpen = ref(false); // <--- TAMBAHKAN BARIS INI
+const isFakturModalOpen = ref(false);
+const mobileTableFilterOpen = ref(false);
+
 const selectedOrder = ref<OrderListItem | null>(null);
 
 const selectedOrderModels = ref<OrderDetailModel[]>([]);
@@ -1446,7 +1450,126 @@ function openOrderDetail(order: OrderListItem) {
     selectedOrderModels.value = [];
 
     isDetailOpen.value = true;
+
+    const filterMap: Record<PeriodPreset, string> = {
+        today: "day",
+        this_week: "week",
+        this_month: "month",
+        this_year: "year",
+        custom: "custom",
+    };
+
+    router.get(
+        "/dashboard",
+        {
+            filter: filterMap[activePreset.value],
+
+            tanggal_awal: startDate.value,
+
+            tanggal_akhir: endDate.value,
+
+            cari: tableSearch.value.trim() || null,
+
+            status: statusFilter.value === "ALL" ? null : statusFilter.value,
+
+            jenis_order: typeFilter.value === "ALL" ? null : typeFilter.value,
+
+            halaman: currentPage.value,
+
+            per_halaman: perPage.value,
+
+            urut_kolom: sortBy.value,
+
+            urut_arah: sortOrder.value.toUpperCase(),
+
+            id_order: order.id_order,
+        },
+        {
+            preserveState: true,
+
+            preserveScroll: true,
+
+            replace: true,
+
+            onSuccess: (page) => {
+                const pageProps = page.props as typeof page.props & {
+                    orderDetailModels?: OrderDetailModel[];
+                };
+
+                selectedOrderModels.value = pageProps.orderDetailModels ?? [];
+            },
+
+            onError: () => {
+                selectedOrderModels.value = [];
+
+                toast.error("Gagal mengambil detail model order.");
+            },
+        },
+    );
 }
+
+function openFakturModal(order: OrderListItem) {
+    selectedOrder.value = order;
+    selectedOrderModels.value = [];
+    isDetailOpen.value = false;
+    isFakturModalOpen.value = true;
+
+    const filterMap: Record<PeriodPreset, string> = {
+        today: "day",
+        this_week: "week",
+        this_month: "month",
+        this_year: "year",
+        custom: "custom",
+    };
+
+    router.get(
+        "/dashboard",
+        {
+            filter: filterMap[activePreset.value],
+            tanggal_awal: startDate.value,
+            tanggal_akhir: endDate.value,
+            cari: tableSearch.value.trim() || null,
+            status: statusFilter.value === "ALL" ? null : statusFilter.value,
+            jenis_order: typeFilter.value === "ALL" ? null : typeFilter.value,
+            halaman: currentPage.value,
+            per_halaman: perPage.value,
+            urut_kolom: sortBy.value,
+            urut_arah: sortOrder.value.toUpperCase(),
+            id_order: order.id_order,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            onSuccess: (page) => {
+                const pageProps = page.props as typeof page.props & {
+                    orderDetailModels?: OrderDetailModel[];
+                };
+                selectedOrderModels.value = pageProps.orderDetailModels ?? [];
+            },
+            onError: () => {
+                selectedOrderModels.value = [];
+            },
+        },
+    );
+}
+
+const selectedOrderTotal = computed(() => {
+    return selectedOrderModels.value.reduce(
+        (total, item) => {
+            total.qty += Number(item.qty || 0);
+            total.hpp += Number(item.hpp || 0);
+            total.harga_jual += Number(item.harga_jual || 0);
+
+            return total;
+        },
+        {
+            qty: 0,
+            hpp: 0,
+            harga_jual: 0,
+        },
+    );
+});
 
 /* ============================================================
    INITIAL DATA
@@ -1577,7 +1700,7 @@ function openOrderDetail(order: OrderListItem) {
                     <input
                         type="date"
                         v-model="customStartInput"
-                        class=" px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                        class="px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                     />
                 </div>
 
@@ -1589,7 +1712,7 @@ function openOrderDetail(order: OrderListItem) {
                     <input
                         type="date"
                         v-model="customEndInput"
-                        class="  px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                        class="px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                     />
                 </div>
 
@@ -1604,134 +1727,143 @@ function openOrderDetail(order: OrderListItem) {
         </section>
 
         <!-- Filter mobile. -->
-<section
-    class="min-w-0 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm shadow-slate-200/40 md:hidden dark:border-slate-800/80 dark:bg-slate-900 dark:shadow-none"
-    aria-label="Filter periode order"
->
-    <div class="flex min-w-0 items-center justify-between gap-3">
-        <div class="min-w-0 flex-1" aria-live="polite">
-            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">
-                {{ mobilePeriodLabel }}
-            </p>
-            <p class="mt-1 text-xs font-semibold text-slate-800 dark:text-slate-100">
-                {{ formatDateIndo(startDate) }} – {{ formatDateIndo(endDate) }}
-            </p>
-        </div>
-
-        <button
-            type="button"
-            @click="toggleMobileFilter"
-            :aria-expanded="mobileFilterOpen"
-            aria-controls="order-mobile-period-panel"
-            class="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-blue-200/60 bg-blue-50/80 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50"
+        <section
+            class="min-w-0 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm shadow-slate-200/40 md:hidden dark:border-slate-800/80 dark:bg-slate-900 dark:shadow-none"
+            aria-label="Filter periode order"
         >
-            <SlidersHorizontal class="h-3.5 w-3.5" aria-hidden="true" />
-            Filter
-            <ChevronDown
-                class="h-3.5 w-3.5 transition-transform motion-reduce:transition-none"
-                :class="{ 'rotate-180': mobileFilterOpen }"
-                aria-hidden="true"
-            />
-        </button>
-    </div>
-
-    <div
-        v-show="mobileFilterOpen"
-        id="order-mobile-period-panel"
-        class="mt-2 border-t border-slate-100 pt-2 dark:border-slate-800"
-    >
-        <div
-            ref="mobilePresetList"
-            role="group"
-            aria-label="Pilihan periode"
-            class="relative flex min-w-0 flex-nowrap gap-1.5 overflow-x-auto pb-1"
-        >
-            <button
-                v-for="preset in mobilePeriodPresets"
-                :key="preset.key"
-                type="button"
-                @click="selectMobilePreset(preset.key)"
-                :aria-pressed="mobileSelectedPreset === preset.key"
-                class="min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded-lg border px-3 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
-                :class="
-                    mobileSelectedPreset === preset.key
-                        ? 'border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500'
-                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
-                "
-            >
-                {{ preset.label }}
-            </button>
-        </div>
-
-        <div
-            v-if="mobileSelectedPreset === 'custom'"
-            class="mt-2 grid min-w-0 grid-cols-2 gap-2"
-        >
-            <label class="min-w-0 text-xs font-medium text-slate-500 dark:text-slate-400">
-                Mulai
-                <input
-                    type="date"
-                    v-model="customStartInput"
-                    class="mt-1 block h-10 w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                />
-            </label>
-
-            <label class="min-w-0 text-xs font-medium text-slate-500 dark:text-slate-400">
-                Sampai
-                <input
-                    type="date"
-                    v-model="customEndInput"
-                    class="mt-1 block h-10 w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                />
-            </label>
-        </div>
-
-        <div class="mt-1 flex items-center justify-between gap-2">
-            <div
-                v-if="mobileSelectedPreset !== 'custom'"
-                class="flex items-center gap-1.5"
-            >
-                <button
-                    type="button"
-                    @click="navigatePeriod(-1)"
-                    :disabled="activePreset === 'custom'"
-                    aria-label="Periode sebelumnya"
-                    class="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                >
-                    <ChevronLeft class="h-4 w-4" aria-hidden="true" />
-                </button>
+            <div class="flex min-w-0 items-center justify-between gap-3">
+                <div class="min-w-0 flex-1" aria-live="polite">
+                    <p
+                        class="text-xs font-medium text-slate-500 dark:text-slate-400"
+                    >
+                        {{ mobilePeriodLabel }}
+                    </p>
+                    <p
+                        class="mt-1 text-xs font-semibold text-slate-800 dark:text-slate-100"
+                    >
+                        {{ formatDateIndo(startDate) }} –
+                        {{ formatDateIndo(endDate) }}
+                    </p>
+                </div>
 
                 <button
                     type="button"
-                    @click="navigatePeriod(1)"
-                    :disabled="activePreset === 'custom'"
-                    aria-label="Periode berikutnya"
-                    class="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                    @click="toggleMobileFilter"
+                    :aria-expanded="mobileFilterOpen"
+                    aria-controls="order-mobile-period-panel"
+                    class="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-blue-200/60 bg-blue-50/80 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-900/50"
                 >
-                    <ChevronRight class="h-4 w-4" aria-hidden="true" />
+                    <SlidersHorizontal class="h-3.5 w-3.5" aria-hidden="true" />
+                    Filter
+                    <ChevronDown
+                        class="h-3.5 w-3.5 transition-transform motion-reduce:transition-none"
+                        :class="{ 'rotate-180': mobileFilterOpen }"
+                        aria-hidden="true"
+                    />
                 </button>
             </div>
 
-            <button
-                type="button"
-                @click="resetMobilePeriod"
-                class="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-1 text-xs font-semibold text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
+            <div
+                v-show="mobileFilterOpen"
+                id="order-mobile-period-panel"
+                class="mt-2 border-t border-slate-100 pt-2 dark:border-slate-800"
             >
-                <RotateCcw class="h-3.5 w-3.5" aria-hidden="true" />
-                Reset
-            </button>
+                <div
+                    ref="mobilePresetList"
+                    role="group"
+                    aria-label="Pilihan periode"
+                    class="relative flex min-w-0 flex-nowrap gap-1.5 overflow-x-auto pb-1"
+                >
+                    <button
+                        v-for="preset in mobilePeriodPresets"
+                        :key="preset.key"
+                        type="button"
+                        @click="selectMobilePreset(preset.key)"
+                        :aria-pressed="mobileSelectedPreset === preset.key"
+                        class="min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded-lg border px-3 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+                        :class="
+                            mobileSelectedPreset === preset.key
+                                ? 'border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500'
+                                : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                        "
+                    >
+                        {{ preset.label }}
+                    </button>
+                </div>
 
-            <button
-                v-if="mobileSelectedPreset === 'custom'"
-                type="button"
-                @click="applyMobileCustomRange"
-                class="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white transition hover:bg-blue-700"
-            >
-                Terapkan
-            </button>
-        </div>
-    </div>
-</section>
+                <div
+                    v-if="mobileSelectedPreset === 'custom'"
+                    class="mt-2 grid min-w-0 grid-cols-2 gap-2"
+                >
+                    <label
+                        class="min-w-0 text-xs font-medium text-slate-500 dark:text-slate-400"
+                    >
+                        Mulai
+                        <input
+                            type="date"
+                            v-model="customStartInput"
+                            class="mt-1 block h-11 w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-slate-50 px-1.5 text-base text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                        />
+                    </label>
+
+                    <label
+                        class="min-w-0 text-xs font-medium text-slate-500 dark:text-slate-400"
+                    >
+                        Sampai
+                        <input
+                            type="date"
+                            v-model="customEndInput"
+                            class="mt-1 block h-11 w-full min-w-0 max-w-full rounded-lg border border-slate-200 bg-slate-50 px-1.5 text-base text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                        />
+                    </label>
+                </div>
+
+                <div class="mt-1 flex items-center justify-between gap-2">
+                    <div
+                        v-if="mobileSelectedPreset !== 'custom'"
+                        class="flex items-center gap-1.5"
+                    >
+                        <button
+                            type="button"
+                            @click="navigatePeriod(-1)"
+                            :disabled="activePreset === 'custom'"
+                            aria-label="Periode sebelumnya"
+                            class="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                        >
+                            <ChevronLeft class="h-4 w-4" aria-hidden="true" />
+                        </button>
+
+                        <button
+                            type="button"
+                            @click="navigatePeriod(1)"
+                            :disabled="activePreset === 'custom'"
+                            aria-label="Periode berikutnya"
+                            class="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                        >
+                            <ChevronRight class="h-4 w-4" aria-hidden="true" />
+                        </button>
+                    </div>
+
+                    <button
+                        type="button"
+                        @click="resetMobilePeriod"
+                        class="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-1 text-xs font-semibold text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
+                    >
+                        <RotateCcw class="h-3.5 w-3.5" aria-hidden="true" />
+                        Reset
+                    </button>
+
+                    <button
+                        v-if="mobileSelectedPreset === 'custom'"
+                        type="button"
+                        @click="applyMobileCustomRange"
+                        class="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white transition hover:bg-blue-700"
+                    >
+                        Terapkan
+                    </button>
+                </div>
+            </div>
+        </section>
 
         <!-- =========================================================
              KPI
@@ -1931,12 +2063,15 @@ function openOrderDetail(order: OrderListItem) {
         <section
             class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-6 shadow-sm shadow-slate-200/40 dark:shadow-none space-y-4"
         >
-           <!-- TOOLBAR -->
+            <!-- TOOLBAR -->
+
             <div
                 class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800"
             >
-                <!-- Area Judul & Tombol Toggle Mobile -->
-                <div class="flex items-start justify-between w-full lg:w-auto gap-4">
+                <!-- JUDUL + TOGGLE FILTER MOBILE -->
+                <div
+                    class="flex items-start justify-between w-full lg:w-auto gap-4"
+                >
                     <div>
                         <h2
                             class="text-base font-semibold text-slate-900 dark:text-white"
@@ -1945,14 +2080,16 @@ function openOrderDetail(order: OrderListItem) {
                         </h2>
 
                         <p class="text-xs text-slate-400 mt-0.5">
-                            Menampilkan orderan berdasarkan tgl_order periode terpilih
+                            Menampilkan orderan berdasarkan tgl_order periode
+                            terpilih
                         </p>
                     </div>
 
-                    <!-- Tombol Filter Mobile (Sembunyi otomatis di Desktop) -->
+                    <!-- Tombol filter hanya tampil di mobile -->
                     <button
                         type="button"
                         @click="mobileTableFilterOpen = !mobileTableFilterOpen"
+                        :aria-expanded="mobileTableFilterOpen"
                         class="lg:hidden shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition cursor-pointer"
                     >
                         <Search class="h-3.5 w-3.5" />
@@ -1964,10 +2101,16 @@ function openOrderDetail(order: OrderListItem) {
                     </button>
                 </div>
 
-                <!-- Filter Controls (Sembunyi di Mobile jika ditutup, Selalu tampil di Desktop) -->
+                <!-- FILTER TABLE
+                     Mobile: hidden sampai tombol Cari ditekan
+                     Desktop: selalu tampil -->
                 <div
                     class="w-full lg:w-auto sm:flex-wrap sm:items-center gap-2 transition-all"
-                    :class="mobileTableFilterOpen ? 'grid sm:flex' : 'hidden lg:flex'"
+                    :class="
+                        mobileTableFilterOpen
+                            ? 'grid sm:flex'
+                            : 'hidden lg:flex'
+                    "
                 >
                     <!-- SEARCH -->
                     <div class="relative w-full sm:w-64">
@@ -2023,7 +2166,6 @@ function openOrderDetail(order: OrderListItem) {
                         class="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer shadow-xs transition"
                     >
                         <Download class="h-3.5 w-3.5 text-slate-500" />
-
                         Ekspor CSV
                     </button>
                 </div>
@@ -2214,16 +2356,27 @@ function openOrderDetail(order: OrderListItem) {
                                 </span>
                             </td>
 
-                            <td class="py-3.5 text-right">
-                                <button
-                                    type="button"
-                                    @click.stop="openOrderDetail(order)"
-                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition cursor-pointer"
+                            <td class="py-3.5 text-right" @click.stop>
+                                <div
+                                    class="inline-flex items-center gap-1.5 justify-end"
                                 >
-                                    <Eye class="h-3.5 w-3.5" />
-
-                                    Detail
-                                </button>
+                                    <button
+                                        type="button"
+                                        @click.stop="openOrderDetail(order)"
+                                        title="Lihat Detail Order"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/60 dark:text-blue-400 transition cursor-pointer"
+                                    >
+                                        <Eye class="h-3.5 w-3.5" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click.stop="openFakturModal(order)"
+                                        title="Cetak Faktur / Struk"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/60 dark:text-blue-400 transition cursor-pointer"
+                                    >
+                                        <Printer class="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
                             </td>
                         </tr>
 
@@ -2436,15 +2589,24 @@ function openOrderDetail(order: OrderListItem) {
                             </span>
                         </div>
 
-                        <button
-                            type="button"
-                            @click.stop="openOrderDetail(order)"
-                            class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 transition cursor-pointer"
-                        >
-                            <Eye class="h-3.5 w-3.5" />
-
-                            Detail
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <button
+                                type="button"
+                                @click.stop="openFakturModal(order)"
+                                class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 px-2.5 py-1 rounded-lg transition cursor-pointer"
+                            >
+                                <Printer class="h-3.5 w-3.5" />
+                                <span>Cetak</span>
+                            </button>
+                            <button
+                                type="button"
+                                @click.stop="openOrderDetail(order)"
+                                class="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2 py-1 transition cursor-pointer"
+                            >
+                                <Eye class="h-3.5 w-3.5" />
+                                <span>Detail</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -2532,144 +2694,562 @@ function openOrderDetail(order: OrderListItem) {
              DETAIL DRAWER
              ========================================================= -->
 
-       <!-- =========================================================
-             DETAIL DRAWER
-             ========================================================= -->
         <Sheet :open="isDetailOpen" @update:open="isDetailOpen = $event">
             <SheetContent
                 side="right"
                 class="w-full sm:max-w-lg p-0 overflow-y-auto"
             >
-                <div v-if="selectedOrder" class="p-6 space-y-6">
+                <div v-if="selectedOrder" class="p-6 space-y-5">
+                    <!-- ====================================================== -->
                     <!-- HEADER -->
-                    <SheetHeader class="pb-3 border-b border-slate-100 dark:border-slate-800">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded-md">
+                    <!-- ====================================================== -->
+                    <SheetHeader
+                        class="pb-3 border-b border-slate-100 dark:border-slate-800"
+                    >
+                        <div class="flex items-center justify-between gap-3">
+                            <span
+                                class="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded-md"
+                            >
                                 Detail Orderan
                             </span>
-                            <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
-                                :class="ORDER_STATUS_MAP[String(selectedOrder.status)]?.badgeClass || 'bg-slate-100 text-slate-600'">
-                                {{ selectedOrder.nama_status || ORDER_STATUS_MAP[String(selectedOrder.status)]?.label || `Status ${selectedOrder.status}` }}
+
+                            <span
+                                class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                                :class="
+                                    ORDER_STATUS_MAP[
+                                        String(selectedOrder.status)
+                                    ]?.badgeClass ||
+                                    'bg-slate-100 text-slate-600'
+                                "
+                            >
+                                {{
+                                    selectedOrder.nama_status ||
+                                    ORDER_STATUS_MAP[
+                                        String(selectedOrder.status)
+                                    ]?.label ||
+                                    `Status ${selectedOrder.status}`
+                                }}
                             </span>
                         </div>
-                        <SheetTitle class="text-lg font-bold text-slate-900 dark:text-white mt-1">
-                            {{ selectedOrder.no_order }}
-                        </SheetTitle>
 
+                        <div
+                            class="flex items-center justify-between gap-2 mt-1"
+                        >
+                            <SheetTitle
+                                class="text-lg font-bold text-slate-900 dark:text-white"
+                            >
+                                {{ selectedOrder.no_order }}
+                            </SheetTitle>
+                        </div>
                         <SheetDescription class="text-xs text-slate-400">
                             Informasi order berdasarkan data orderan.
                         </SheetDescription>
                     </SheetHeader>
 
-                    <!-- 1. INFORMASI ORDER -->
-                    <div class="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 p-4">
-                        <h4 class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600 mb-4">
-                            1. Informasi Order
-                        </h4>
-                        <div class="grid grid-cols-2 gap-3 text-slate-600 dark:text-slate-300 text-xs">
-                            <div> ID Order: <strong class="text-slate-900 dark:text-white block mt-0.5"> #{{ selectedOrder.id_order }} </strong> </div>
-                            <div> No Order: <strong class="text-slate-900 dark:text-white block mt-0.5"> {{ selectedOrder.no_order }} </strong> </div>
-                            <div> No PO: <strong class="text-slate-900 dark:text-white block mt-0.5"> {{ selectedOrder.no_po || "-" }} </strong> </div>
-                            <div> Jenis: <strong class="text-slate-900 dark:text-white block mt-0.5"> {{ selectedOrder.nama_jenis || `Jenis ${selectedOrder.jenis_order}` }} </strong> </div>
-                            <div> Tanggal Order: <strong class="text-slate-900 dark:text-white block mt-0.5"> {{ formatDateIndo(selectedOrder.tgl_order) }} </strong> </div>
-                            <div> Estimasi: <strong class="text-slate-900 dark:text-white block mt-0.5"> {{ formatDateIndo(selectedOrder.tgl_estimasi) }} </strong> </div>
-                        </div>
-                    </div>
+                    <!-- ====================================================== -->
+                    <!-- 1. INFORMASI ORDER + 2. PELANGGAN + 4. STATUS -->
+                    <!-- ====================================================== -->
+                    <div
+                        class="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 overflow-hidden"
+                    >
+                        <div class="grid grid-cols-2">
+                            <!-- ================================================== -->
+                            <!-- KOLOM KIRI - INFORMASI ORDER -->
+                            <!-- ================================================== -->
+                            <div class="p-4">
+                                <h4
+                                    class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600 mb-3"
+                                >
+                                    Informasi Order
+                                </h4>
 
-                    <!-- 2. INFORMASI PELANGGAN -->
-                    <div class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2.5 text-xs">
-                        <h4 class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600">
-                            2. Informasi Pelanggan
-                        </h4>
-                        <div class="space-y-2 text-slate-600 dark:text-slate-300">
-                            <div class="flex justify-between gap-3">
-                                <span> Kode Pelanggan </span>
-                                <strong class="text-slate-900 dark:text-white"> {{ selectedOrder.kd_cus || "-" }} </strong>
+                                <div
+                                    class="space-y-2 text-xs text-slate-600 dark:text-slate-300"
+                                >
+                                    <div>
+                                        <div
+                                            class="text-[10px] text-slate-400 mb-0.5"
+                                        >
+                                            No Order
+                                        </div>
+
+                                        <strong
+                                            class="block text-slate-900 dark:text-white break-all"
+                                        >
+                                            {{ selectedOrder.no_order }}
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <div
+                                            class="text-[10px] text-slate-400 mb-0.5"
+                                        >
+                                            No PO
+                                        </div>
+
+                                        <strong
+                                            class="block text-slate-900 dark:text-white break-all"
+                                        >
+                                            {{ selectedOrder.no_po || "-" }}
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <div
+                                            class="text-[10px] text-slate-400 mb-0.5"
+                                        >
+                                            Jenis
+                                        </div>
+
+                                        <strong
+                                            class="block text-slate-900 dark:text-white"
+                                        >
+                                            {{
+                                                selectedOrder.nama_jenis ||
+                                                `Jenis ${selectedOrder.jenis_order}`
+                                            }}
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <div
+                                            class="text-[10px] text-slate-400 mb-0.5"
+                                        >
+                                            Tanggal Order
+                                        </div>
+
+                                        <strong
+                                            class="block text-slate-900 dark:text-white"
+                                        >
+                                            {{
+                                                formatDateIndo(
+                                                    selectedOrder.tgl_order,
+                                                )
+                                            }}
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <div
+                                            class="text-[10px] text-slate-400 mb-0.5"
+                                        >
+                                            Estimasi
+                                        </div>
+
+                                        <strong
+                                            class="block text-slate-900 dark:text-white"
+                                        >
+                                            {{
+                                                formatDateIndo(
+                                                    selectedOrder.tgl_estimasi,
+                                                )
+                                            }}
+                                        </strong>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="flex justify-between gap-3">
-                                <span> Nama Pelanggan </span>
-                                <strong class="text-slate-900 dark:text-white text-right"> {{ selectedOrder.nm_cus || "-" }} </strong>
+
+                            <!-- ================================================== -->
+                            <!-- KOLOM KANAN - CUSTOMER + STATUS -->
+                            <!-- ================================================== -->
+                            <div
+                                class="border-l border-slate-200 dark:border-slate-700"
+                            >
+                                <!-- CUSTOMER -->
+                                <div class="p-4">
+                                    <h4
+                                        class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600 mb-3"
+                                    >
+                                        Informasi Pelanggan
+                                    </h4>
+
+                                    <div
+                                        class="space-y-2.5 text-xs text-slate-600 dark:text-slate-300"
+                                    >
+                                        <div>
+                                            <div
+                                                class="text-[10px] text-slate-400 mb-0.5"
+                                            >
+                                                Kode Pelanggan
+                                            </div>
+
+                                            <strong
+                                                class="block text-slate-900 dark:text-white break-all"
+                                            >
+                                                {{
+                                                    selectedOrder.kd_cus || "-"
+                                                }}
+                                            </strong>
+                                        </div>
+
+                                        <div>
+                                            <div
+                                                class="text-[10px] text-slate-400 mb-0.5"
+                                            >
+                                                Nama Pelanggan
+                                            </div>
+
+                                            <strong
+                                                class="block text-slate-900 dark:text-white break-words"
+                                            >
+                                                {{
+                                                    selectedOrder.nm_cus || "-"
+                                                }}
+                                            </strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- PEMISAH CUSTOMER / STATUS -->
+                                <div
+                                    class="border-t border-slate-200 dark:border-slate-700"
+                                ></div>
+
+                                <!-- STATUS -->
+                                <div class="p-4">
+                                    <h4
+                                        class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600 mb-3"
+                                    >
+                                        Status Order
+                                    </h4>
+
+                                    <div class="space-y-2.5 text-xs">
+                                        <div>
+                                            <div
+                                                class="text-[10px] text-slate-400 mb-0.5"
+                                            >
+                                                Target selesai
+                                            </div>
+
+                                            <strong
+                                                class="block text-slate-900 dark:text-white"
+                                            >
+                                                {{
+                                                    formatDateIndo(
+                                                        selectedOrder.tgl_estimasi,
+                                                    )
+                                                }}
+                                            </strong>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 3. STATUS ORDER -->
-                    <div class="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2.5 text-xs">
-                        <h4 class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600">
-                            3. Status Order
-                        </h4>
-                        <div class="flex items-center justify-between pb-2">
-                            <span class="text-slate-500"> Status: </span>
-                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold" :class="ORDER_STATUS_MAP[String(selectedOrder.status)]?.badgeClass || 'bg-slate-100 text-slate-600'">
-                                {{ selectedOrder.nama_status || ORDER_STATUS_MAP[String(selectedOrder.status)]?.label || `Status ${selectedOrder.status}` }}
-                            </span>
-                        </div>
-                        <div class="flex items-center justify-between gap-3 pt-1">
-                            <span class="text-slate-500"> Total Kuantitas </span>
-                            <strong class="text-slate-900 dark:text-white"> {{ formatNumber(selectedOrder.total_qty) }} Pcs </strong>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-slate-500"> Total HPP </span>
-                            <strong class="text-slate-700 dark:text-slate-300"> {{ formatRupiah(selectedOrder.total_hpp) }} </strong>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-slate-500"> Total Penjualan </span>
-                            <strong class="text-blue-600 dark:text-blue-400"> {{ formatRupiah(selectedOrder.total_jual) }} </strong>
-                        </div>
-                        <div class="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
-                            <span class="font-bold text-slate-800 dark:text-slate-200"> Estimasi Laba Kotor </span>
-                            <strong class="font-extrabold text-emerald-600 dark:text-emerald-400">
-                                {{ formatRupiah(Number(selectedOrder.total_jual) - Number(selectedOrder.total_hpp)) }}
-                            </strong>
-                        </div>
-                        <div class="flex justify-between text-xs text-slate-500">
-                            <span> Margin Laba Kotor </span>
-                            <strong class="text-emerald-600 dark:text-emerald-400">
-                                {{ Number(selectedOrder.total_jual) > 0 ? (((Number(selectedOrder.total_jual) - Number(selectedOrder.total_hpp)) / Number(selectedOrder.total_jual)) * 100).toFixed(1) : "0.0" }}%
-                            </strong>
-                        </div>
-                    </div>
-
-                    <!-- 4. DETAIL PESANAN -->
-                    <div class="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 overflow-hidden">
+                    <!-- ====================================================== -->
+                    <!-- 3. DETAIL PESANAN -->
+                    <!-- ====================================================== -->
+                    <div
+                        class="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 overflow-hidden"
+                    >
+                        <!-- HEADER -->
                         <div class="px-4 pt-4 pb-2">
-                            <div class="flex items-center justify-between gap-2">
-                                <h4 class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"> 4. Detail Pesanan </h4>
-                                <span v-if="selectedOrderModels.length > 0" class="text-[10px] font-semibold text-slate-400">
+                            <div
+                                class="flex items-center justify-between gap-2"
+                            >
+                                <h4
+                                    class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600"
+                                >
+                                    Detail Pesanan
+                                </h4>
+
+                                <span
+                                    v-if="selectedOrderModels.length > 0"
+                                    class="text-[10px] font-semibold text-slate-400"
+                                >
                                     {{ selectedOrderModels.length }} Model
                                 </span>
                             </div>
                         </div>
-                        <div v-if="selectedOrderModels.length > 0" class="px-3 pb-3">
-                            <div class="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+
+                        <!-- TABLE -->
+                        <div
+                            v-if="selectedOrderModels.length > 0"
+                            class="px-3 pb-3"
+                        >
+                            <div
+                                class="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden"
+                            >
                                 <table class="w-full table-fixed text-[10px]">
-                                    <thead class="bg-slate-100 dark:bg-slate-800">
+                                    <thead
+                                        class="bg-slate-100 dark:bg-slate-800"
+                                    >
                                         <tr>
-                                            <th class="px-1.5 py-2 text-center font-semibold text-slate-500 dark:text-slate-400 w-[8%]"> No </th>
-                                            <th class="px-1.5 py-2 text-left font-semibold text-slate-500 dark:text-slate-400 w-[36%]"> Model </th>
-                                            <th class="px-1 py-2 text-right font-semibold text-slate-500 dark:text-slate-400 w-[15%]"> Pcs </th>
-                                            <th class="px-1 py-2 text-right font-semibold text-slate-500 dark:text-slate-400 w-[20%]"> HPP </th>
-                                            <th class="px-1.5 py-2 text-right font-semibold text-slate-500 dark:text-slate-400 w-[21%]"> Jual </th>
+                                            <!-- NO -->
+                                            <th
+                                                class="px-1.5 py-2 text-center font-semibold text-slate-500 dark:text-slate-400 w-[8%]"
+                                            >
+                                                No
+                                            </th>
+
+                                            <!-- MODEL -->
+                                            <th
+                                                class="px-1.5 py-2 text-left font-semibold text-slate-500 dark:text-slate-400 w-[36%]"
+                                            >
+                                                Model
+                                            </th>
+
+                                            <!-- PCS -->
+                                            <th
+                                                class="px-1 py-2 text-right font-semibold text-slate-500 dark:text-slate-400 w-[15%]"
+                                            >
+                                                Pcs
+                                            </th>
+
+                                            <!-- HPP -->
+                                            <th
+                                                class="px-1 py-2 text-right font-semibold text-slate-500 dark:text-slate-400 w-[20%]"
+                                            >
+                                                HPP
+                                            </th>
+
+                                            <!-- JUAL -->
+                                            <th
+                                                class="px-1.5 py-2 text-right font-semibold text-slate-500 dark:text-slate-400 w-[21%]"
+                                            >
+                                                Jual
+                                            </th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                                        <tr v-for="(item, index) in selectedOrderModels" :key="`${selectedOrder?.id_order}-${item.nm_model}-${index}`" class="bg-white dark:bg-slate-900/30 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
-                                            <td class="px-1.5 py-2 text-center text-slate-400"> {{ index + 1 }} </td>
-                                            <td class="px-1.5 py-2 font-semibold text-slate-900 dark:text-white break-words"> {{ item.nm_model || "Tanpa Nama Model" }} </td>
-                                            <td class="px-1 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap"> {{ formatNumber(item.qty) }} </td>
-                                            <td class="px-1 py-2 text-right text-slate-700 dark:text-slate-300 whitespace-nowrap"> {{ item.hpp !== undefined && item.hpp !== null ? formatRupiah(item.hpp) : "-" }} </td>
-                                            <td class="px-1.5 py-2 text-right text-blue-600 dark:text-blue-400 font-semibold whitespace-nowrap"> {{ item.harga_jual !== undefined && item.harga_jual !== null ? formatRupiah(item.harga_jual) : "-" }} </td>
+
+                                    <tbody
+                                        class="divide-y divide-slate-200 dark:divide-slate-700"
+                                    >
+                                        <tr
+                                            v-for="(
+                                                item, index
+                                            ) in selectedOrderModels"
+                                            :key="`${selectedOrder?.id_order}-${item.nm_model}-${index}`"
+                                            class="bg-white dark:bg-slate-900/30"
+                                        >
+                                            <!-- NO -->
+                                            <td
+                                                class="px-1.5 py-2 text-center text-slate-400"
+                                            >
+                                                {{ index + 1 }}
+                                            </td>
+
+                                            <!-- MODEL -->
+                                            <td
+                                                class="px-1.5 py-2 font-semibold text-slate-900 dark:text-white break- leading-tight"
+                                            >
+                                                {{
+                                                    item.nm_model ||
+                                                    "Tanpa Nama Model"
+                                                }}
+                                            </td>
+
+                                            <!-- PCS -->
+                                            <td
+                                                class="px-1 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap"
+                                            >
+                                                {{ formatNumber(item.qty) }}
+                                            </td>
+
+                                            <!-- HPP -->
+                                            <td
+                                                class="px-1 py-2 text-right text-slate-700 dark:text-slate-300 whitespace-nowrap"
+                                            >
+                                                {{
+                                                    item.hpp !== undefined &&
+                                                    item.hpp !== null
+                                                        ? formatRupiah(item.hpp)
+                                                        : "-"
+                                                }}
+                                            </td>
+
+                                            <!-- HARGA JUAL -->
+                                            <td
+                                                class="px-1.5 py-2 text-right text-blue-600 dark:text-blue-400 font-semibold whitespace-nowrap"
+                                            >
+                                                {{
+                                                    item.harga_jual !==
+                                                        undefined &&
+                                                    item.harga_jual !== null
+                                                        ? formatRupiah(
+                                                              item.harga_jual,
+                                                          )
+                                                        : "-"
+                                                }}
+                                            </td>
                                         </tr>
                                     </tbody>
+
+                                    <!-- TOTAL -->
+                                    <!-- <tfoot
+                                        class="bg-slate-50 dark:bg-slate-800/50"
+                                    >
+                                        <tr
+                                            class="font-semibold text-slate-700 dark:text-slate-200"
+                                        >
+                                            <td
+                                                colspan="2"
+                                                class="px-2 py-2 text-left"
+                                            >
+                                                Total
+                                            </td>
+
+                                            <td class="px-2 py-2 text-right">
+                                                {{ selectedOrderTotal.qty }}
+                                            </td>
+
+                                            <td class="px-2 py-2 text-right">
+                                                {{
+                                                    formatRupiah(
+                                                        selectedOrderTotal.hpp,
+                                                    )
+                                                }}
+                                            </td>
+
+                                            <td
+                                                class="px-2 py-2 text-right text-emerald-600"
+                                            >
+                                                {{
+                                                    formatRupiah(
+                                                        selectedOrderTotal.harga_jual,
+                                                    )
+                                                }}
+                                            </td>
+                                        </tr>
+                                    </tfoot> -->
                                 </table>
                             </div>
                         </div>
-                        <div v-else class="px-4 pb-5 text-center text-xs text-slate-400">
+
+                        <!-- EMPTY -->
+                        <div
+                            v-else
+                            class="px-4 pb-5 text-center text-xs text-slate-400"
+                        >
                             Tidak ada detail model untuk order ini.
+                        </div>
+                    </div>
+
+                    <!-- ====================================================== -->
+                    <!-- 5. TOTAL -->
+                    <!-- ====================================================== -->
+                    <div
+                        class="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 p-4"
+                    >
+                        <h4
+                            class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider text-blue-600 mb-4"
+                        >
+                            Total
+                        </h4>
+
+                        <div class="space-y-2.5 text-xs">
+                            <!-- TOTAL QTY -->
+                            <div
+                                class="flex items-center justify-between gap-3"
+                            >
+                                <span class="text-slate-500">
+                                    Total Kuantitas
+                                </span>
+
+                                <strong class="text-slate-900 dark:text-white">
+                                    {{ formatNumber(selectedOrder.total_qty) }}
+                                    Pcs
+                                </strong>
+                            </div>
+
+                            <!-- TOTAL HPP -->
+                            <div
+                                class="flex items-center justify-between gap-3"
+                            >
+                                <span class="text-slate-500"> Total HPP </span>
+
+                                <strong
+                                    class="text-slate-700 dark:text-slate-300"
+                                >
+                                    {{ formatRupiah(selectedOrder.total_hpp) }}
+                                </strong>
+                            </div>
+
+                            <!-- TOTAL PENJUALAN -->
+                            <div
+                                class="flex items-center justify-between gap-3"
+                            >
+                                <span class="text-slate-500">
+                                    Total Penjualan
+                                </span>
+
+                                <strong
+                                    class="text-blue-600 dark:text-blue-400"
+                                >
+                                    {{ formatRupiah(selectedOrder.total_jual) }}
+                                </strong>
+                            </div>
+
+                            <!-- PEMISAH -->
+                            <div
+                                class="border-t border-slate-200 dark:border-slate-700 my-2"
+                            ></div>
+
+                            <!-- LABA -->
+                            <div
+                                class="flex items-center justify-between gap-3"
+                            >
+                                <span
+                                    class="font-bold text-slate-800 dark:text-slate-200"
+                                >
+                                    Estimasi Laba Kotor
+                                </span>
+
+                                <strong
+                                    class="font-extrabold text-emerald-600 dark:text-emerald-400"
+                                >
+                                    {{
+                                        formatRupiah(
+                                            Number(selectedOrder.total_jual) -
+                                                Number(selectedOrder.total_hpp),
+                                        )
+                                    }}
+                                </strong>
+                            </div>
+
+                            <!-- MARGIN -->
+                            <div
+                                class="flex items-center justify-between gap-3"
+                            >
+                                <span class="text-slate-500">
+                                    Margin Laba Kotor
+                                </span>
+
+                                <strong
+                                    class="text-emerald-600 dark:text-emerald-400"
+                                >
+                                    {{
+                                        Number(selectedOrder.total_jual) > 0
+                                            ? (
+                                                  ((Number(
+                                                      selectedOrder.total_jual,
+                                                  ) -
+                                                      Number(
+                                                          selectedOrder.total_hpp,
+                                                      )) /
+                                                      Number(
+                                                          selectedOrder.total_jual,
+                                                      )) *
+                                                  100
+                                              ).toFixed(1)
+                                            : "0.0"
+                                    }}%
+                                </strong>
+                            </div>
                         </div>
                     </div>
                 </div>
             </SheetContent>
         </Sheet>
+
+        <!-- =========================================================================
+             7. MODAL CETAK FAKTUR & STRUK PEMBELIAN (FakturOrder)
+             ========================================================================= -->
+        <FakturOrder
+            v-model="isFakturModalOpen"
+            :order="selectedOrder"
+            :models="selectedOrderModels"
+        />
     </div>
 </template>
