@@ -7,6 +7,8 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
+use Illuminate\Validation\ValidationException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -27,4 +29,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // Menangkap error 429 Throttle dan mengubahnya menjadi Validation Exception untuk Inertia
+        $exceptions->render(function (ThrottleRequestsException $e, Request $request) {
+            if ($request->header('X-Inertia')) {
+                $seconds = $e->getHeaders()['Retry-After'] ?? 60;
+
+                throw ValidationException::withMessages([
+                    'Username' => "Terlalu banyak percobaan. Silakan coba lagi dalam {$seconds} detik.",
+                ]);
+            }
+        });
     })->create();
