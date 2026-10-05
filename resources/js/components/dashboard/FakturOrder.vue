@@ -37,6 +37,7 @@ export interface FakturModelItem {
     id_order?: number;
     tgl_order?: string;
     nm_model: string;
+    size?: string;
     qty: number;
     hpp?: number;
     harga_jual?: number;
@@ -97,6 +98,7 @@ const lineItems = computed(() => {
             return {
                 no: idx + 1,
                 name: item.nm_model || 'Model Pakaian',
+                size: item.size || null,
                 qty: qty,
                 unitPrice: unitPrice,
                 subtotal: subtotal,
@@ -919,7 +921,15 @@ function executePrint(isPdfIntent: boolean = false) {
                                 <tr v-for="item in lineItems" :key="item.no">
                                     <td style="text-align: center; color: #94a3b8; font-family: monospace;">{{ item.no }}</td>
                                     <td>
-                                        <div class="faktur-item-name">{{ item.name }}</div>
+                                        <div class="faktur-item-name flex items-center gap-2">
+                                            <span>{{ item.name }}</span>
+                                            <span
+                                                v-if="item.size"
+                                                class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-300"
+                                            >
+                                                Size {{ item.size }}
+                                            </span>
+                                        </div>
                                         <div class="faktur-item-desc">Garansi jahitan rapi & QC lolos</div>
                                     </td>
                                     <td style="text-align: right; font-weight: 700; color: #0f172a;">
@@ -1033,7 +1043,7 @@ function executePrint(isPdfIntent: boolean = false) {
                     <!-- Line Items Table -->
                     <div class="struk-items">
                         <div v-for="item in lineItems" :key="item.no" class="struk-item-block">
-                            <div class="struk-item-title">{{ item.name }}</div>
+                            <div class="struk-item-title">{{ item.name }} {{ item.size ? `[Size: ${item.size}]` : '' }}</div>
                             <div class="struk-line struk-item-detail">
                                 <span>{{ item.qty }} pcs x {{ formatRupiah(item.unitPrice) }}</span>
                                 <span class="struk-val">{{ formatRupiah(item.subtotal) }}</span>

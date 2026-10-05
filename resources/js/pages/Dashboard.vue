@@ -59,8 +59,9 @@ const props = defineProps<{
 
     orderDetailModels?: Array<{
         id_order: number;
-        tgl_order: string;
+        tgl_order?: string;
         nm_model: string;
+        size?: string;
         qty: number;
         hpp: number;
         harga_jual: number;
