@@ -1437,6 +1437,7 @@ const orderTypeChartOptions = computed(() => ({
 const isDetailOpen = ref(false);
 const isFakturModalOpen = ref(false);
 const mobileTableFilterOpen = ref(false);
+
 const selectedOrder = ref<OrderListItem | null>(null);
 
 const selectedOrderModels = ref<OrderDetailModel[]>([]);
@@ -2062,7 +2063,8 @@ const selectedOrderTotal = computed(() => {
         <section
             class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-6 shadow-sm shadow-slate-200/40 dark:shadow-none space-y-4"
         >
-           <!-- TOOLBAR -->
+            <!-- TOOLBAR -->
+
             <div
                 class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800"
             >
@@ -2115,6 +2117,7 @@ const selectedOrderTotal = computed(() => {
                         <Search
                             class="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400"
                         />
+
                         <input
                             type="text"
                             v-model="tableSearch"
@@ -2130,6 +2133,7 @@ const selectedOrderTotal = computed(() => {
                             class="w-full sm:w-auto px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-medium rounded-lg sm:rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
                         >
                             <option value="ALL">Semua Status</option>
+
                             <option
                                 v-for="(value, key) in ORDER_STATUS_MAP"
                                 :key="key"
@@ -2144,6 +2148,7 @@ const selectedOrderTotal = computed(() => {
                             class="w-full sm:w-auto px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-medium rounded-lg sm:rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
                         >
                             <option value="ALL">Semua Jenis</option>
+
                             <option
                                 v-for="type in orderTypeOptions"
                                 :key="type.value"
