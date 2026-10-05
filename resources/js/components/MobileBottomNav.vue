@@ -5,7 +5,10 @@ const { activeTab, tabs, switchTab } = useDashboardTab();
 </script>
 
 <template>
-    <div class="fixed bottom-0 left-0 z-50 w-full h-16 bg-white border-t border-slate-200 dark:bg-slate-900 dark:border-slate-800 md:hidden flex items-center px-2 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+    <div
+        v-if="tabs.length > 1"
+        class="fixed bottom-0 left-0 z-50 w-full h-16 bg-white border-t border-slate-200 dark:bg-slate-900 dark:border-slate-800 md:hidden flex items-center px-2 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.06)]"
+    >
         <div class="flex items-center gap-1.5 overflow-x-auto scrollbar-none w-full py-1 px-1">
             <button
                 v-for="item in tabs"

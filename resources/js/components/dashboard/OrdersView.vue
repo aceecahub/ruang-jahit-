@@ -1436,6 +1436,7 @@ const orderTypeChartOptions = computed(() => ({
 
 const isDetailOpen = ref(false);
 const isFakturModalOpen = ref(false);
+const mobileTableFilterOpen = ref(false);
 
 const selectedOrder = ref<OrderListItem | null>(null);
 
@@ -2067,43 +2068,69 @@ const selectedOrderTotal = computed(() => {
             <div
                 class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800"
             >
-                <div>
-                    <h2
-                        class="text-base font-semibold text-slate-900 dark:text-white"
-                    >
-                        Daftar Orderan Masuk
-                    </h2>
+                <!-- JUDUL + TOGGLE FILTER MOBILE -->
+                <div
+                    class="flex items-start justify-between w-full lg:w-auto gap-4"
+                >
+                    <div>
+                        <h2
+                            class="text-base font-semibold text-slate-900 dark:text-white"
+                        >
+                            Daftar Orderan Masuk
+                        </h2>
 
-                    <p class="text-xs text-slate-400 mt-0.5">
-                        Menampilkan orderan berdasarkan tgl_order periode
-                        terpilih
-                    </p>
+                        <p class="text-xs text-slate-400 mt-0.5">
+                            Menampilkan orderan berdasarkan tgl_order periode
+                            terpilih
+                        </p>
+                    </div>
+
+                    <!-- Tombol filter hanya tampil di mobile -->
+                    <button
+                        type="button"
+                        @click="mobileTableFilterOpen = !mobileTableFilterOpen"
+                        :aria-expanded="mobileTableFilterOpen"
+                        class="lg:hidden shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition cursor-pointer"
+                    >
+                        <Search class="h-3.5 w-3.5" />
+                        Cari
+                        <ChevronDown
+                            class="h-3.5 w-3.5 transition-transform"
+                            :class="{ 'rotate-180': mobileTableFilterOpen }"
+                        />
+                    </button>
                 </div>
 
+                <!-- FILTER TABLE
+                     Mobile: hidden sampai tombol Cari ditekan
+                     Desktop: selalu tampil -->
                 <div
-                    class="grid grid-cols-1 sm:flex sm:flex-wrap sm:items-center gap-2.5 w-full lg:w-auto"
+                    class="w-full lg:w-auto sm:flex-wrap sm:items-center gap-2 transition-all"
+                    :class="
+                        mobileTableFilterOpen
+                            ? 'grid sm:flex'
+                            : 'hidden lg:flex'
+                    "
                 >
                     <!-- SEARCH -->
-
                     <div class="relative w-full sm:w-64">
                         <Search
-                            class="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400"
+                            class="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400"
                         />
 
                         <input
                             type="text"
                             v-model="tableSearch"
                             placeholder="Cari no order / PO / pelanggan..."
-                            class="w-full pl-8.5 pr-3 py-2 sm:py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                            class="w-full pl-8 pr-3 py-1.5 sm:py-2 text-[11px] sm:text-xs rounded-lg sm:rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                         />
                     </div>
 
-                    <!-- FILTER -->
-
+                    <!-- FILTER STATUS & JENIS -->
                     <div class="grid grid-cols-2 sm:flex sm:items-center gap-2">
                         <select
                             v-model="statusFilter"
-                            class="w-full sm:w-auto px-3 py-2 sm:py-1.5 text-xs font-medium rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
+                            class="w-full sm:w-auto px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-medium rounded-lg sm:rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
                         >
                             <option value="ALL">Semua Status</option>
 
@@ -2118,7 +2145,7 @@ const selectedOrderTotal = computed(() => {
 
                         <select
                             v-model="typeFilter"
-                            class="w-full sm:w-auto px-3 py-2 sm:py-1.5 text-xs font-medium rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
+                            class="w-full sm:w-auto px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-medium rounded-lg sm:rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 focus:outline-hidden cursor-pointer"
                         >
                             <option value="ALL">Semua Jenis</option>
 
@@ -2133,14 +2160,12 @@ const selectedOrderTotal = computed(() => {
                     </div>
 
                     <!-- EXPORT -->
-
                     <button
                         type="button"
                         @click="triggerCsvExport"
-                        class="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer shadow-xs transition"
+                        class="w-full sm:w-auto justify-center inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer shadow-xs transition"
                     >
                         <Download class="h-3.5 w-3.5 text-slate-500" />
-
                         Ekspor CSV
                     </button>
                 </div>
@@ -3007,7 +3032,7 @@ const selectedOrderTotal = computed(() => {
 
                                             <!-- MODEL -->
                                             <td
-                                                class="px-1.5 py-2 font-semibold text-slate-900 dark:text-white break-   leading-tight"
+                                                class="px-1.5 py-2 font-semibold text-slate-900 dark:text-white break- leading-tight"
                                             >
                                                 {{
                                                     item.nm_model ||

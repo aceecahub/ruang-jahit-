@@ -1,26 +1,8 @@
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
-import {
-    LayoutGrid,
-    TrendingUp,
-    ClipboardList,
-    Banknote,
-    Boxes,
-    Users,
-    UserCheck,
-    Truck,
-} from '@lucide/vue';
+import { ClipboardList } from '@lucide/vue';
 
-export type DashboardTabKey =
-    | 'overview'
-    | 'sales'
-    | 'orders'
-    | 'production'
-    | 'finance'
-    | 'inventory'
-    | 'customers'
-    | 'employees'
-    | 'quality';
+export type DashboardTabKey = 'orders';
 
 export interface DashboardTabItem {
     key: DashboardTabKey;
@@ -30,39 +12,27 @@ export interface DashboardTabItem {
 }
 
 export const DASHBOARD_TABS: DashboardTabItem[] = [
-    { key: 'overview', title: 'Ringkasan Bisnis', icon: LayoutGrid, href: '/dashboard?tab=overview' },
-    { key: 'sales', title: 'Penjualan', icon: TrendingUp, href: '/dashboard?tab=sales' },
     { key: 'orders', title: 'Orderan', icon: ClipboardList, href: '/dashboard?tab=orders' },
-    { key: 'finance', title: 'Keuangan', icon: Banknote, href: '/dashboard?tab=finance' },
-    { key: 'inventory', title: 'Inventaris & Bahan', icon: Boxes, href: '/dashboard?tab=inventory' },
-    { key: 'customers', title: 'Pelanggan', icon: Users, href: '/dashboard?tab=customers' },
-    { key: 'employees', title: 'Produktivitas Karyawan', icon: UserCheck, href: '/dashboard?tab=employees' },
-    { key: 'quality', title: 'Kualitas & Pengiriman', icon: Truck, href: '/dashboard?tab=quality' },
 ];
 
 // Shared active tab state
-const activeTabState = ref<DashboardTabKey>('overview');
+const activeTabState = ref<DashboardTabKey>('orders');
 
 export function useDashboardTab() {
     function initTabFromUrl() {
         if (typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search);
-            let tabParam = params.get('tab') as DashboardTabKey;
-            // Backwards compatibility for 'production' -> 'orders'
-            if ((tabParam as any) === 'production') {
-                tabParam = 'orders';
-            }
+            const tabParam = params.get('tab') as DashboardTabKey;
             if (tabParam && DASHBOARD_TABS.some((t) => t.key === tabParam)) {
                 activeTabState.value = tabParam;
+            } else {
+                activeTabState.value = 'orders';
             }
         }
     }
 
     function switchTab(tabKey: string) {
-        let validKey = tabKey as DashboardTabKey;
-        if ((validKey as any) === 'production') {
-            validKey = 'orders';
-        }
+        const validKey = tabKey as DashboardTabKey;
         if (DASHBOARD_TABS.some((t) => t.key === validKey)) {
             activeTabState.value = validKey;
 
