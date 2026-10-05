@@ -8,7 +8,7 @@
 export interface OrderRecord {
     IdToko: number;
     id_order: number;
-    no_order: string;
+    no_order: string;   
     tgl_order: string; // YYYY-MM-DD
     no_po: string;
     no_rutin: string;

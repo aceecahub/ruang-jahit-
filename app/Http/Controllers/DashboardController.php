@@ -27,7 +27,7 @@ class DashboardController extends Controller
             ],
         ]);
 
-        $filter = $validated['filter'] ?? 'month';
+        $filter = $validated['filter'] ?? 'day';
 
         // Tentukan periode tanggal
         if (
@@ -77,7 +77,6 @@ class DashboardController extends Controller
                     ]);
 
                 case 'month':
-                default:
                     $tanggalAwal = $now->copy()
                         ->startOfMonth()
                         ->toDateString();
@@ -85,6 +84,11 @@ class DashboardController extends Controller
                     $tanggalAkhir = $now->copy()
                         ->endOfMonth()
                         ->toDateString();
+                    break;
+
+                default:
+                    $tanggalAwal = $now->toDateString();
+                    $tanggalAkhir = $tanggalAwal;
                     break;
             }
         }
@@ -123,12 +127,21 @@ class DashboardController extends Controller
             ->values();
 
         // QUERY TREND
+        // Jika filter hari ini ('day'), ambil rentang minggu berjalan agar grafik tren tidak kosong / hanya 1 titik data
+        $trendTanggalAwal = $tanggalAwal;
+        $trendTanggalAkhir = $tanggalAkhir;
+        if ($filter === 'day') {
+            $parsedDay = Carbon::parse($tanggalAwal);
+            $trendTanggalAwal = $parsedDay->copy()->startOfWeek()->toDateString();
+            $trendTanggalAkhir = $parsedDay->copy()->endOfWeek()->toDateString();
+        }
+
         $trendResult = DB::select(
             'EXEC dbo.sp_dash_order
                 @tanggal_awal = ?,
                 @tanggal_akhir = ?,
                 @bagian = ?',
-            [$tanggalAwal, $tanggalAkhir, 'trend']
+            [$trendTanggalAwal, $trendTanggalAkhir, 'trend']
         );
 
         $trendKuantitas = collect($trendResult)

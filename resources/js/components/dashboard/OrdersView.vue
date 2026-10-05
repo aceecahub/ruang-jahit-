@@ -134,6 +134,12 @@ const props = defineProps<{
     orderDetailModels?: OrderDetailModel[];
 
     orderPagination?: OrderPagination;
+
+    filter?: string;
+
+    tanggalAwal?: string;
+
+    tanggalAkhir?: string;
 }>();
 
 /* ============================================================
@@ -210,27 +216,24 @@ type PeriodPreset =
     | "this_year"
     | "custom";
 
-const activePreset = ref<PeriodPreset>("this_month");
+function getInitialPreset(): PeriodPreset {
+    if (props.filter === "day") return "today";
+    if (props.filter === "week") return "this_week";
+    if (props.filter === "month") return "this_month";
+    if (props.filter === "year") return "this_year";
+    if (props.filter === "custom") return "custom";
+    return "today";
+}
 
-const todayDateObject = parseDate(TODAY_DATE);
+const activePreset = ref<PeriodPreset>(getInitialPreset());
 
-const defaultYear = todayDateObject.getFullYear();
+const startDate = ref<string>(props.tanggalAwal || TODAY_DATE);
 
-const defaultMonth = String(todayDateObject.getMonth() + 1).padStart(2, "0");
+const endDate = ref<string>(props.tanggalAkhir || TODAY_DATE);
 
-const defaultLastDay = new Date(
-    defaultYear,
-    todayDateObject.getMonth() + 1,
-    0,
-).getDate();
+const customStartInput = ref<string>(props.tanggalAwal || TODAY_DATE);
 
-const startDate = ref<string>(`${defaultYear}-${defaultMonth}-01`);
-
-const endDate = ref<string>(`${defaultYear}-${defaultMonth}-${defaultLastDay}`);
-
-const customStartInput = ref<string>(`${defaultYear}-${defaultMonth}-01`);
-
-const customEndInput = ref<string>(TODAY_DATE);
+const customEndInput = ref<string>(props.tanggalAkhir || TODAY_DATE);
 
 const periodOffset = ref(0);
 
@@ -516,23 +519,15 @@ function applyCustomRange() {
    ============================================================ */
 
 function resetPeriod() {
-    activePreset.value = "this_month";
+    activePreset.value = "today";
 
     periodOffset.value = 0;
 
-    const today = parseDate(TODAY_DATE);
+    startDate.value = TODAY_DATE;
 
-    const year = today.getFullYear();
+    endDate.value = TODAY_DATE;
 
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-
-    const lastDay = new Date(year, today.getMonth() + 1, 0).getDate();
-
-    startDate.value = `${year}-${month}-01`;
-
-    endDate.value = `${year}-${month}-${lastDay}`;
-
-    customStartInput.value = `${year}-${month}-01`;
+    customStartInput.value = TODAY_DATE;
 
     customEndInput.value = TODAY_DATE;
 
@@ -991,7 +986,18 @@ const orderTrendBuckets = computed<ChartBucket[]>(() => {
 
     const totalDays = getDayDifference(start, end) + 1;
 
-    if (activePreset.value === "today" || activePreset.value === "this_week") {
+    if (activePreset.value === "today") {
+        // Samakan seperti minggu ini agar grafik tren tidak kosong jika hanya 1 data
+        const currentTarget = parseDate(startDate.value);
+        const day = currentTarget.getDay();
+        const diffToMonday = day === 0 ? -6 : 1 - day;
+        const monday = new Date(currentTarget);
+        monday.setDate(currentTarget.getDate() + diffToMonday);
+        const sunday = addDays(monday, 6);
+        return createDailyBuckets(monday, sunday);
+    }
+
+    if (activePreset.value === "this_week") {
         return createDailyBuckets(start, end);
     }
 
@@ -1655,7 +1661,11 @@ const selectedOrderTotal = computed(() => {
                     >
                         <Calendar class="h-3.5 w-3.5" />
 
-                        <span>
+                        <span v-if="startDate === endDate">
+                            Periode:
+                            {{ formatDateIndo(startDate) }}
+                        </span>
+                        <span v-else>
                             Periode:
                             {{ formatDateIndo(startDate) }}
                             –
@@ -1676,7 +1686,7 @@ const selectedOrderTotal = computed(() => {
                     <button
                         type="button"
                         @click="resetPeriod"
-                        title="Kembali ke Bulan Ini"
+                        title="Kembali ke Hari Ini"
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer shadow-xs transition"
                     >
                         <RotateCcw class="h-3.5 w-3.5" />
@@ -1741,8 +1751,7 @@ const selectedOrderTotal = computed(() => {
                     <p
                         class="mt-1 text-xs font-semibold text-slate-800 dark:text-slate-100"
                     >
-                        {{ formatDateIndo(startDate) }} –
-                        {{ formatDateIndo(endDate) }}
+                        {{ startDate === endDate ? formatDateIndo(startDate) : `${formatDateIndo(startDate)} – ${formatDateIndo(endDate)}` }}
                     </p>
                 </div>
 
